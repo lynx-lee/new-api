@@ -146,6 +146,7 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			return types.NewError(err, types.ErrorCodeModelPriceError, types.ErrOptionWithSkipRetry(), types.ErrOptionWithStatusCode(http.StatusBadRequest))
 		}
 		service.PostTextConsumeQuota(c, info, usageDto, nil)
+		info.Usage = usageDto
 
 		info.OriginModelName = originModelName
 		info.PriceData = originPriceData
@@ -157,5 +158,6 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 	} else {
 		service.PostTextConsumeQuota(c, info, usageDto, nil)
 	}
+	info.Usage = usageDto
 	return nil
 }

@@ -281,6 +281,18 @@ func recordRelayMetrics(info *relaycommon.RelayInfo, err *types.NewAPIError) {
 	duration := time.Since(info.StartTime).Seconds()
 	metrics.RelayRequestsTotal.WithLabelValues(provider, modelName, statusLabel).Inc()
 	metrics.RelayRequestDuration.WithLabelValues(provider, modelName, statusLabel).Observe(duration)
+
+	// 记录 token 用量指标
+	if info.Usage != nil && err == nil {
+		if info.Usage.PromptTokens > 0 {
+			metrics.RelayTokensTotal.WithLabelValues(provider, modelName, "prompt").
+				Add(float64(info.Usage.PromptTokens))
+		}
+		if info.Usage.CompletionTokens > 0 {
+			metrics.RelayTokensTotal.WithLabelValues(provider, modelName, "completion").
+				Add(float64(info.Usage.CompletionTokens))
+		}
+	}
 }
 
 func fastTokenCountMetaForPricing(request dto.Request) *types.TokenCountMeta {

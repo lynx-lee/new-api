@@ -16,6 +16,8 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 
+	"github.com/QuantumNous/new-api/metrics"
+
 	"github.com/bytedance/gopkg/util/gopool"
 
 	"github.com/gin-gonic/gin"
@@ -255,6 +257,9 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 			if !strings.HasPrefix(data, "[DONE]") {
 				info.SetFirstResponseTime()
 				info.ReceivedResponseCount++
+				metrics.RelayStreamEventsTotal.WithLabelValues(
+					constant.GetChannelTypeName(info.ChannelType), info.OriginModelName, "sse_chunk",
+				).Inc()
 
 				select {
 				case dataChan <- data:

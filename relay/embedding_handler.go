@@ -83,5 +83,6 @@ func EmbeddingHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		return newAPIError
 	}
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
+	info.Usage = usage.(*dto.Usage)
 	return nil
 }

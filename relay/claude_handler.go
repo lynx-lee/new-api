@@ -142,8 +142,8 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		}
 
 		service.PostTextConsumeQuota(c, info, usage, nil)
+		info.Usage = usage
 		return nil
-	}
 
 	var requestBody io.Reader
 	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
@@ -210,5 +210,8 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
+	info.Usage = usage.(*dto.Usage)
 	return nil
 }
+
+func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {

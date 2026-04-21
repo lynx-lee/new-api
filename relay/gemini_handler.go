@@ -195,6 +195,7 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
+	info.Usage = usage.(*dto.Usage)
 	return nil
 }
 
@@ -289,5 +290,6 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPI
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
+	info.Usage = usage.(*dto.Usage)
 	return nil
 }

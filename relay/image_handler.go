@@ -151,5 +151,6 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	}
 
 	service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), logContent)
+	info.Usage = usage.(*dto.Usage)
 	return nil
 }

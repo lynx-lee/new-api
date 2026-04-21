@@ -72,6 +72,7 @@ func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 	} else {
 		service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
 	}
+	info.Usage = usage.(*dto.Usage)
 
 	return nil
 }
