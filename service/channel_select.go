@@ -7,6 +7,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/canary"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/gin-gonic/gin"
 )
@@ -158,5 +159,75 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			return nil, param.TokenGroup, err
 		}
 	}
+
+	// Apply canary release routing if enabled and multiple channels exist
+	if channel != nil && common.CanaryEnabled {
+		if selected, tag := applyCanarySelection(param.Ctx, channel, selectGroup, param.ModelName, userGroup); selected != nil {
+			channel = selected
+			if len(tag) > 0 {
+				param.Ctx.Set(canary.CanaryTagKey, tag)
+			}
+		}
+	}
+
 	return channel, selectGroup, nil
+}
+
+// applyCanarySelection checks if canary rules override the selected channel.
+// Returns (possibly replaced channel, canary tag). Returns original if no canary rule matches.
+func applyCanarySelection(c *gin.Context, selected *model.Channel, groupName, modelName, userGroup string) (*model.Channel, string) {
+	mgr := canary.GetManager()
+	if mgr == nil {
+		return selected, ""
+	}
+	config := mgr.GetConfig(modelName, userGroup)
+	if config == nil || !config.Enabled {
+		return selected, ""
+	}
+	// Get all candidate IDs for this group+model
+	allIDs := model.GetAllSatisfiedChannelIDs(groupName, modelName)
+	if len(allIDs) <= 1 {
+		return selected, "" // no point filtering single channel
+	}
+	userTags := GetCanaryUserTags(c)
+	filteredIDs, tag := mgr.SelectChannel(modelName, userGroup, userTags, allIDs)
+	if filteredIDs == nil {
+		return selected, "" // no canary rule matched, keep original selection
+	}
+	// Build allowed ID set for quick lookup
+	allowed := make(map[int]bool)
+	for _, id := range filteredIDs {
+		allowed[id] = true
+	}
+	// If already in allowed set, keep it
+	if allowed[selected.Id] {
+		return selected, tag
+	}
+	// Otherwise pick a random channel from the canary-filtered set
+	for _, id := range filteredIDs {
+		ch, err := model.CacheGetChannel(id)
+		if err == nil && ch != nil && ch.Status == common.ChannelStatusEnabled {
+			logger.LogDebug(c, "canary routing: replaced channel %d -> %d (tag=%s)", selected.Id, ch.Id, tag)
+			return ch, tag
+		}
+	}
+	return selected, "" // fallback if all filtered channels unavailable
+}
+
+// GetCanaryUserTags extracts user tags from gin context for canary matching.
+// Tags come from custom headers or user attributes.
+func GetCanaryUserTags(c *gin.Context) []string {
+	var tags []string
+	if tag := c.GetHeader("X-Canary-Tag"); tag != "" {
+		tags = append(tags, tag)
+	}
+	if tag := c.GetHeader("X-Beta-User"); tag != "" {
+		tags = append(tags, tag)
+	}
+	// Add user group as implicit tag
+	userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+	if userGroup != "" && userGroup != "default" && userGroup != "auto" {
+		tags = append(tags, "group:"+userGroup)
+	}
+	return tags
 }

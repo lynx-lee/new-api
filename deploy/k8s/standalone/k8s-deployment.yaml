@@ -1,15 +1,17 @@
 # New-API Kubernetes Deployment Manifests (Standalone)
-# Usage: kubectl apply -f k8s/ -n new-api
+# Full self-contained deployment: App + Redis + PostgreSQL + HPA + PDB + NetworkPolicy + ServiceMonitor
+#
+# Usage:
+#   kubectl apply -f deploy/k8s/standalone/k8s-deployment.yaml
+#   kubectl get pods -n new-api -w
 #
 # Prerequisites:
-#   1. Create namespace: kubectl create ns new-api
-#   2. Generate secrets: see secrets.example.yaml
+#   1. Kubernetes cluster v1.24+ (for PodDisruptionBudget v1, HPA v2)
+#   2. kubectl configured with cluster admin access
+#   3. StorageClass provisioned (for PVC dynamic provisioning)
 #
-# Architecture:
-#   - 2+ replicas with HPA auto-scaling (2-20 pods)
-#   - Redis for distributed cache, rate limiting, session sync
-#   - PostgreSQL for persistent data
-#   - Prometheus metrics + ServiceMonitor
+# Cleanup:
+#   kubectl delete -f deploy/k8s/standalone/k8s-deployment.yaml
 
 ---
 apiVersion: v1
@@ -19,6 +21,7 @@ metadata:
   labels:
     app.kubernetes.io/name: new-api
     app.kubernetes.io/component: gateway
+    pod-security.kubernetes.io/enforce: restricted
 ---
 apiVersion: v1
 kind: Secret
@@ -34,18 +37,235 @@ stringData:
   db-password: "new-api-password"
   redis-password: "new-api-redis-password"
 ---
+# ============================================================
+# PostgreSQL — Primary Database
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: new-api
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgresql
+      annotations:
+        prometheus.io/scrape: "false"
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:16-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              value: root
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: new-api-secrets
+                  key: db-password
+            - name: POSTGRES_DB
+              value: new-api
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_INITDB_ARGS
+              value: "--encoding=UTF-8 --collate=C --ctype=C"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "root", "-d", "new-api"]
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "root", "-d", "new-api"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: pg-data
+          persistentVolumeClaim:
+            claimName: pg-data-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-data-pvc
+  namespace: new-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  # Uncomment and set your StorageClass if needed:
+  # storageClassName: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: new-api
+  labels:
+    app.kubernetes.io/name: postgresql
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    app.kubernetes.io/name: postgresql
+---
+# ============================================================
+# Redis — Distributed Cache & Rate Limiting
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: new-api
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          command:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --maxmemory
+            - "256mb"
+            - --maxmemory-policy
+            - allkeys-lru
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: new-api-secrets
+                  key: redis-password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - -a
+                - $(REDIS_PASSWORD)
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - -a
+                - $(REDIS_PASSWORD)
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: new-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: new-api
+  labels:
+    app.kubernetes.io/name: redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    app.kubernetes.io/name: redis
+---
+# ============================================================
+# New-API Application
+# ============================================================
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: new-api-config
   namespace: new-api
 data:
-  # Database DSN (update host/port if using external DB)
   SQL_DSN: "root:new-api-password@postgresql.new-api.svc.cluster.local:5432/new-api?sslmode=disable"
-  # Redis connection string
   REDIS_CONN_STRING: "redis://:new-api-redis-password@redis.new-api.svc.cluster.local:6379/0"
   REDIS_POOL_SIZE: "10"
-  # Node type: master runs background tasks (batch update, channel sync)
   NODE_TYPE: "master"
   NODE_NAME: "new-api-k8s"
   SYNC_FREQUENCY: "60"
@@ -69,8 +289,12 @@ data:
   STREAMING_TIMEOUT: "300"
   RELAY_TIMEOUT: "0"
   RELAY_MAX_IDLE_CONNS: "500"
+  RELAY_MAX_IDLE_CONNS_PER_HOST: "100"
   DEBUG: "false"
   ENABLE_PPROF: "false"
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  METRICS_PATH: "/metrics"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -107,6 +331,13 @@ spec:
         runAsUser: 1000
         fsGroup: 1000
       terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: wait-for-db
+          image: busybox:latest
+          command: ['sh', '-c', 'until nc -z postgresql 5432; do echo waiting for postgres; sleep 2; done']
+        - name: wait-for-redis
+          image: busybox:latest
+          command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done']
       containers:
         - name: new-api
           image: calciumion/new-api:latest
@@ -200,6 +431,9 @@ spec:
     app: new-api
     component: gateway
 ---
+# ============================================================
+# Auto Scaling
+# ============================================================
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -239,6 +473,9 @@ spec:
           value: 100
           periodSeconds: 15
 ---
+# ============================================================
+# High Availability — Disruption Budget
+# ============================================================
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -251,6 +488,9 @@ spec:
       app: new-api
       component: gateway
 ---
+# ============================================================
+# Network Security Policy
+# ============================================================
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -284,11 +524,28 @@ spec:
         - protocol: TCP
           port: 80
     - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # DNS
+    - to:
         - namespaceSelector: {}
       ports:
         - protocol: UDP
           port: 53
 ---
+# ============================================================ Prometheus Monitoring
+# ============================================================
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

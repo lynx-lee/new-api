@@ -190,6 +190,31 @@ func GetRandomSatisfiedChannel(group string, model string, retry int) (*Channel,
 	return nil, errors.New("channel not found")
 }
 
+// GetAllSatisfiedChannelIDs returns all enabled channel IDs for a group+model combination.
+// This is used by the canary release system to perform traffic splitting.
+func GetAllSatisfiedChannelIDs(group string, model string) []int {
+	if !common.MemoryCacheEnabled {
+		return nil // fallback to direct DB query not supported for canary
+	}
+
+	channelSyncLock.RLock()
+	defer channelSyncLock.RUnlock()
+
+	channels := group2model2channels[group][model]
+	if len(channels) == 0 {
+		normalizedModel := ratio_setting.FormatMatchingModelName(model)
+		channels = group2model2channels[group][normalizedModel]
+	}
+	if len(channels) == 0 {
+		return nil
+	}
+
+	// Return a copy of the ID list
+	result := make([]int, len(channels))
+	copy(result, channels)
+	return result
+}
+
 func CacheGetChannel(id int) (*Channel, error) {
 	if !common.MemoryCacheEnabled {
 		return GetChannelById(id, true)

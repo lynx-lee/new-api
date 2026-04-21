@@ -184,3 +184,51 @@ var (
 		Help:      "Current disk cache usage in bytes",
 	})
 )
+
+// ---- Circuit Breaker Metrics ----
+
+var (
+	CircuitBreakerStateGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "newapi",
+			Name:      "circuitbreaker_state",
+			Help:      "Circuit breaker state (0=closed, 1=open, 2=half-open)",
+		},
+		[]string{"name"},
+	)
+
+	CircuitBreakerRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "newapi",
+			Name:      "circuitbreaker_requests_total",
+			Help:      "Total requests through circuit breaker",
+		},
+		[]string{"name", "result"}, // result: success | failure | short_circuited
+	)
+)
+
+// ---- Alerting Metrics ----
+
+var (
+	AlertsFiredTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "newapi",
+			Name:      "alerts_fired_total",
+			Help:      "Total alerts fired by rule type and severity",
+		},
+		[]string{"rule_type", "severity"},
+	)
+)
+
+// ---- Canary Release Metrics ----
+
+var (
+	CanaryRoutingTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "newapi",
+			Name:      "canary_routing_total",
+			Help:      "Canary routing decisions by tag and strategy",
+		},
+		[]string{"tag", "strategy", "result"}, // result: routed | fallback
+	)
+)

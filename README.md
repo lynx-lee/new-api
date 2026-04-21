@@ -113,11 +113,14 @@
 git clone https://github.com/QuantumNous/new-api.git
 cd new-api
 
-# Edit docker-compose.yml configuration
-nano docker-compose.yml
+# Create environment file and edit passwords
+cp deploy/.env.example .env
+nano .env   # ⚠️ Change DB_PASSWORD, REDIS_PASSWORD!
 
-# Start the service
-docker-compose up -d
+# Start with PostgreSQL (default)
+docker compose --profile postgres up -d
+
+# Access at http://localhost:3000 | Metrics at http://localhost:9090/metrics
 ```
 
 <details>
@@ -151,7 +154,7 @@ docker run --name new-api -d --restart always \
 
 🎉 After deployment is complete, visit `http://localhost:3000` to start using!
 
-📖 For more deployment methods, please refer to [Deployment Guide](https://docs.newapi.pro/en/docs/installation)
+📖 For complete deployment guide with **Docker Compose** and **Kubernetes**, see [deploy/README.md](./deploy/README.md)
 
 ---
 
@@ -298,6 +301,17 @@ docker run --name new-api -d --restart always \
 
 > [!TIP]
 > **Latest Docker image:** `calciumion/new-api:latest`
+>
+> **Full deployment guide:** [deploy/README.md](./deploy/README.md) (Docker Compose + Kubernetes)
+
+### 📋 Deployment Methods Overview
+
+| Method | Use Case | Complexity |
+|--------|----------|------------|
+| **[Docker Compose](./deploy/README.md#method-1-docker-compose)** | Development / Single server / PoC | ![Beginner](https://img.shields.io/badge/difficulty-beginner-green) |
+| **[Kubernetes Helm Chart](./deploy/README.md#method-2-kubernetes-helm-chart)** | Production cluster (with HPA, PDB, Ingress) | ![Intermediate](https://img.shields.io/badge/difficulty-intermediate-yellow) |
+| **[Kubernetes Standalone](./deploy/README.md#method-3-kubernetes-standalone-manifests)** | Production without Helm dependency | ![Intermediate](https://img.shields.io/badge/difficulty-intermediate-yellow) |
+| **Docker Run** | Quick test / Minimal setup | ![Beginner](https://img.shields.io/badge/difficulty-beginner-green) |
 
 ### 📋 Deployment Requirements
 
@@ -306,6 +320,7 @@ docker run --name new-api -d --restart always \
 | **Local database** | SQLite (Docker must mount `/data` directory)|
 | **Remote database** | MySQL ≥ 5.7.8 or PostgreSQL ≥ 9.6 |
 | **Container engine** | Docker / Docker Compose |
+| **Orchestrator (K8s)** | Kubernetes v1.24+ / Helm 3.12+ |
 
 ### ⚙️ Environment Variable Configuration
 
@@ -353,6 +368,9 @@ docker run --name new-api -d --restart always \
 **Canary Release (NEW):**
 | `CANARY_ENABLED` | Enable canary/gray release routing | `false` |
 
+**Prometheus Metrics (built-in):**
+| `/metrics` | Prometheus scraping endpoint (auto-registered) | - |
+
 📖 **Complete configuration:** [Environment Variables Documentation](https://docs.newapi.pro/en/docs/installation/config-maintenance/environment-variables)
 
 </details>
@@ -367,17 +385,49 @@ docker run --name new-api -d --restart always \
 git clone https://github.com/QuantumNous/new-api.git
 cd new-api
 
-# Edit configuration
-nano docker-compose.yml
+# Create environment file (EDIT passwords before deploying!)
+cp deploy/.env.example .env
+vim .env
 
-# Start service
-docker-compose up -d
+# Start with PostgreSQL (default)
+docker compose --profile postgres up -d
+
+# Or start with MySQL instead
+docker compose --profile mysql up -d
 ```
+
+**Features included:** PostgreSQL/MySQL + Redis, Prometheus metrics (`:9090/metrics`), resource limits, health checks, structured logging.
+
+> Full guide: [deploy/README.md](./deploy/README.md#method-1-docker-compose)
 
 </details>
 
 <details>
-<summary><strong>Method 2: Docker Commands</strong></summary>
+<summary><strong>Method 2: Kubernetes</strong></summary>
+
+**Helm Chart (recommended for production):**
+```bash
+helm install new-api ./deploy/k8s/helm -n new-api \
+  --set sessionSecret=$(openssl rand -hex 32) \
+  --set database.password="your-db-password" \
+  --set redis.auth.password="your-redis-password"
+```
+
+**Standalone manifests (without Helm):**
+```bash
+# Edit secrets in deploy/k8s/standalone/k8s-deployment.yaml first!
+kubectl apply -f deploy/k8s/standalone/k8s-deployment.yaml
+kubectl port-forward svc/new-api -n new-api 3000:3000
+```
+
+**K8s features:** HPA auto-scaling (2-20 pods), PodDisruptionBudget, NetworkPolicy, ServiceMonitor, init containers for DB/Redis readiness.
+
+> Full guide: [deploy/README.md](./deploy/README.md#method-2-kubernetes-helm-chart)
+
+</details>
+
+<details>
+<summary><strong>Method 3: Docker Commands (Quick Test)</strong></summary>
 
 **Using SQLite:**
 ```bash
