@@ -112,6 +112,28 @@ var PreConsumedQuota = 500
 
 var RetryTimes = 0
 
+// OpenTelemetry configuration
+var OtelEnabled bool
+var OtelExporterEndpoint string
+var OtelServiceName string
+var OtelSamplingRatio float64
+
+// Circuit Breaker configuration
+var CircuitBreakerEnabled bool
+var CircuitBreakerErrorThreshold float64
+var CircuitBreakerConsecutiveFailures int
+var CircuitBreakerTimeoutSeconds int
+var CircuitBreakerHalfOpenMaxRequests int
+
+// Alerting configuration
+var AlertingEnabled bool
+var AlertingWebhookURL string
+var AlertingCooldownSeconds int
+var AlertingQuotaThreshold int
+
+// Canary (Gray Release) configuration
+var CanaryEnabled bool
+
 //var RootUserEmail = ""
 
 var IsMasterNode bool

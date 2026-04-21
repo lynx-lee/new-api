@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"context"
+
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/controller"
@@ -23,6 +25,10 @@ import (
 	"github.com/QuantumNous/new-api/relay"
 	"github.com/QuantumNous/new-api/router"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/pkg/alerting"
+	"github.com/QuantumNous/new-api/pkg/canary"
+	"github.com/QuantumNous/new-api/pkg/circuitbreaker"
+	"github.com/QuantumNous/new-api/pkg/tracing"
 	_ "github.com/QuantumNous/new-api/setting/performance_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
@@ -51,6 +57,29 @@ func main() {
 	}
 
 	common.SysLog("New API " + common.Version + " started")
+
+	// Initialize OpenTelemetry tracing
+	otelShutdown, err := tracing.Init()
+	if err != nil {
+		common.SysError(fmt.Sprintf("failed to initialize tracing: %v", err))
+	}
+	defer func() {
+		if otelShutdown != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_ = otelShutdown(ctx)
+			cancel()
+		}
+	}()
+
+	// Initialize Circuit Breaker
+	circuitbreaker.InitManager()
+
+	// Initialize Canary (Gray Release)
+	canary.InitManager()
+
+	// Initialize Alerting Engine
+	alerting.InitEngine()
+	alerting.GetEngine().Start(ctx)
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -171,6 +200,7 @@ func main() {
 	server.Use(middleware.RequestId())
 	server.Use(middleware.PoweredBy())
 	server.Use(metrics.Middleware()) // Prometheus 指标采集中间件
+	server.Use(middleware.TracingMiddleware()) // OpenTelemetry 链路追踪
 	server.Use(middleware.I18n())
 	middleware.SetUpLogger(server)
 	// Initialize session store

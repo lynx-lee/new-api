@@ -16,6 +16,8 @@ import (
 	"github.com/QuantumNous/new-api/metrics"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/alerting"
+	"github.com/QuantumNous/new-api/pkg/circuitbreaker"
 	"github.com/QuantumNous/new-api/relay"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
@@ -150,6 +152,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	relayInfo.SetEstimatePromptTokens(tokens)
 
+	middleware.EnhanceSpanWithRequestContext(c)
+
 	priceData, err := helper.ModelPriceHelper(c, relayInfo, tokens, meta)
 	if err != nil {
 		newAPIError = types.NewError(err, types.ErrorCodeModelPriceError, types.ErrOptionWithStatusCode(http.StatusBadRequest))
@@ -209,15 +213,30 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		}
 		c.Request.Body = io.NopCloser(bodyStorage)
 
+		channelId := common.GetContextKeyInt(c, constant.ContextKeyChannelId)
+		breakerName := fmt.Sprintf("channel:%d:type:%d", channelId, channel.Type)
+
 		switch relayFormat {
 		case types.RelayFormatOpenAIRealtime:
-			newAPIError = relay.WssHelper(c, relayInfo)
+			newAPIError = executeWithCircuitBreaker(breakerName, func() error {
+				newAPIError = relay.WssHelper(c, relayInfo)
+				return newAPIError
+			})
 		case types.RelayFormatClaude:
-			newAPIError = relay.ClaudeHelper(c, relayInfo)
+			newAPIError = executeWithCircuitBreaker(breakerName, func() error {
+				newAPIError = relay.ClaudeHelper(c, relayInfo)
+				return newAPIError
+			})
 		case types.RelayFormatGemini:
-			newAPIError = geminiRelayHandler(c, relayInfo)
+			newAPIError = executeWithCircuitBreaker(breakerName, func() error {
+				newAPIError = geminiRelayHandler(c, relayInfo)
+				return newAPIError
+			})
 		default:
-			newAPIError = relayHandler(c, relayInfo)
+			newAPIError = executeWithCircuitBreaker(breakerName, func() error {
+				newAPIError = relayHandler(c, relayInfo)
+				return newAPIError
+			})
 		}
 
 		if newAPIError == nil {
@@ -243,6 +262,30 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	// Prometheus relay metrics
 	recordRelayMetrics(relayInfo, newAPIError)
+
+	if newAPIError != nil {
+		middleware.SetSpanError(c, newAPIError.Error())
+		alerting.FireRelayError(
+			constant.GetChannelTypeName(channel.Type),
+			relayInfo.OriginModelName,
+			channelId,
+			newAPIError,
+		)
+	}
+}
+
+// executeWithCircuitBreaker wraps a relay call with circuit breaker protection.
+func executeWithCircuitBreaker(breakerName string, fn func() error) *types.NewAPIError {
+	breaker := circuitbreaker.GetManager().GetOrCreateBreaker(breakerName)
+	err := breaker.Execute(fn)
+	var apiErr *types.NewAPIError
+	if err != nil {
+		if errors.As(err, &apiErr) {
+			return apiErr
+		}
+		return types.NewError(err, types.ErrorCodeUpstreamError, types.ErrOptionWithSkipRetry())
+	}
+	return nil
 }
 
 var upgrader = websocket.Upgrader{

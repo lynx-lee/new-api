@@ -153,6 +153,28 @@ func initConstantEnv() {
 	// 异步任务超时时间（分钟），超过此时间未完成的任务将被标记为失败并退款。0 表示禁用。
 	constant.TaskTimeoutMinutes = GetEnvOrDefault("TASK_TIMEOUT_MINUTES", 1440)
 
+	// OpenTelemetry configuration
+	OtelEnabled = GetEnvOrDefaultBool("OTEL_ENABLED", false)
+	OtelExporterEndpoint = GetEnvOrDefaultString("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4318")
+	OtelServiceName = GetEnvOrDefaultString("OTEL_SERVICE_NAME", "new-api")
+	OtelSamplingRatio = GetEnvOrDefaultFloat64("OTEL_SAMPLING_RATIO", 1.0)
+
+	// Circuit Breaker configuration
+	CircuitBreakerEnabled = GetEnvOrDefaultBool("CIRCUIT_BREAKER_ENABLED", true)
+	CircuitBreakerErrorThreshold = GetEnvOrDefaultFloat64("CIRCUIT_BREAKER_ERROR_THRESHOLD", 0.50)
+	CircuitBreakerConsecutiveFailures = GetEnvOrDefault("CIRCUIT_BREAKER_CONSECUTIVE_FAILURES", 5)
+	CircuitBreakerTimeoutSeconds = GetEnvOrDefault("CIRCUIT_BREAKER_TIMEOUT_SECONDS", 30)
+	CircuitBreakerHalfOpenMaxRequests = GetEnvOrDefault("CIRCUIT_BREAKER_HALF_OPEN_MAX_REQUESTS", 3)
+
+	// Alerting configuration
+	AlertingEnabled = GetEnvOrDefaultBool("ALERTING_ENABLED", true)
+	AlertingWebhookURL = GetEnvOrDefaultString("ALERTING_WEBHOOK_URL", "")
+	AlertingCooldownSeconds = GetEnvOrDefault("ALERTING_COOLDOWN_SECONDS", 300)
+	AlertingQuotaThreshold = GetEnvOrDefault("ALERTING_QUOTA_THRESHOLD", 10000)
+
+	// Canary (Gray Release) configuration
+	CanaryEnabled = GetEnvOrDefaultBool("CANARY_ENABLED", false)
+
 	soraPatchStr := GetEnvOrDefaultString("TASK_PRICE_PATCH", "")
 	if soraPatchStr != "" {
 		var taskPricePatches []string
