@@ -99,7 +99,7 @@ func (e *Engine) Start(ctx context.Context) {
 			case event := <-e.eventChan:
 				e.dispatchEvent(event)
 			}
-		}()
+		}
 	}()
 }
 

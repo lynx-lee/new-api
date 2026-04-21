@@ -265,10 +265,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	if newAPIError != nil {
 		middleware.SetSpanError(c, newAPIError.Error())
+		channelType := common.GetContextKeyInt(c, constant.ContextKeyChannelType)
 		alerting.FireRelayError(
-			constant.GetChannelTypeName(channel.Type),
+			constant.GetChannelTypeName(channelType),
 			relayInfo.OriginModelName,
-			channelId,
+			common.GetContextKeyInt(c, constant.ContextKeyChannelId),
 			newAPIError,
 		)
 	}
@@ -283,7 +284,7 @@ func executeWithCircuitBreaker(breakerName string, fn func() error) *types.NewAP
 		if errors.As(err, &apiErr) {
 			return apiErr
 		}
-		return types.NewError(err, types.ErrorCodeUpstreamError, types.ErrOptionWithSkipRetry())
+		return types.NewError(err, types.ErrorCodeBadResponse, types.ErrOptionWithSkipRetry())
 	}
 	return nil
 }

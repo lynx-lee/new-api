@@ -1,7 +1,7 @@
 package tracing
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/QuantumNous/new-api/common"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -10,25 +10,17 @@ import (
 
 // newResource creates a resource with service metadata.
 func newResource() *resource.Resource {
-	attrs := []resource.Option{
+	r, err := resource.New(context.Background(),
 		resource.WithAttributes(
-			semconv.ServiceName(common.OtelServiceName),
-			semconv.ServiceVersion(common.Version),
+			semconv.ServiceNameKey.String(common.OtelServiceName),
+			semconv.ServiceVersionKey.String(common.Version),
 		),
 		resource.WithFromEnv(),
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
-	}
-
-	r, err := NewResource(attrs...)
+	)
 	if err != nil {
-		// fallback to minimal resource
 		return resource.Default()
 	}
 	return r
-}
-
-// NewResource is a thin wrapper to avoid import cycle; delegates to resource.New.
-func NewResource(opts ...resource.Option) (*resource.Resource, error) {
-	return resource.New(opts...)
 }

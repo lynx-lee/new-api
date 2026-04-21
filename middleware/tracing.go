@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -24,7 +25,6 @@ var propagator = propagation.TraceContext{}
 
 // TracingMiddleware creates a Gin middleware for OpenTelemetry distributed tracing.
 // When OTEL_ENABLED=false, this is a no-op middleware with zero overhead.
-// Custom implementation to avoid external otelgin dependency issues.
 func TracingMiddleware() gin.HandlerFunc {
 	if !common.OtelEnabled {
 		return func(c *gin.Context) { c.Next() }
@@ -37,9 +37,9 @@ func TracingMiddleware() gin.HandlerFunc {
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(
 				semconv.HTTPRequestMethodKey.String(c.Request.Method),
-				semconv.URLFull(c.Request.URL.String()),
-				semconv.NetworkProtocolVersion("1.1"),
-				semconv.UserAgentOriginal(c.Request.UserAgent()),
+				attribute.String("url.full", c.Request.URL.String()),
+				attribute.String("network.protocol.version", "1.1"),
+				semconv.UserAgentOriginalKey.String(c.Request.UserAgent()),
 				attribute.String("service", common.OtelServiceName),
 				attribute.String("client.ip", c.ClientIP()),
 			),
@@ -51,15 +51,15 @@ func TracingMiddleware() gin.HandlerFunc {
 
 		c.Next()
 
-		attributes := []attribute.KeyValue{
-			semconv.HTTPResponseStatusCode(c.Writer.Status()),
+		attrs := []attribute.KeyValue{
+			attribute.Int("http.response.status_code", c.Writer.Status()),
 			attribute.Float64("http.duration_ms", float64(time.Since(start).Microseconds())/1000),
 		}
 
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			span.RecordError(fmt.Errorf("gin errors: %s", c.Errors.String()))
-			attributes = append(attributes,
+			attrs = append(attrs,
 				attribute.Int("error.count", len(c.Errors)),
 				attribute.String("error.message", c.Errors.Last().Error()),
 			)
@@ -70,10 +70,10 @@ func TracingMiddleware() gin.HandlerFunc {
 		}
 
 		if requestId := c.GetString(common.RequestIdKey); requestId != "" {
-			attributes = append(attributes, attribute.String("request.id", requestId))
+			attrs = append(attrs, attribute.String("request.id", requestId))
 		}
 
-		span.SetAttributes(attributes...)
+		span.SetAttributes(attrs...)
 
 		propagatorInject(ctx, c.Writer)
 	}
@@ -102,7 +102,7 @@ func EnhanceSpanWithRequestContext(c *gin.Context) {
 		return
 	}
 
-	attrs := []attribute.KeyValue{}
+	var attrs []attribute.KeyValue
 
 	if requestId := c.GetString(common.RequestIdKey); requestId != "" {
 		attrs = append(attrs, attribute.String("request.id", requestId))
@@ -137,7 +137,7 @@ func SetSpanError(c *gin.Context, errMsg string) {
 	if span.IsRecording() {
 		span.SetStatus(codes.Error, errMsg)
 		span.RecordError(fmtErr(errMsg))
-		span.SetAttribute("error.message", errMsg)
+		span.SetAttributes(attribute.String("error.message", errMsg))
 	}
 }
 
@@ -145,7 +145,7 @@ func SetSpanError(c *gin.Context, errMsg string) {
 // Returns (context, span) - caller must call span.End().
 func StartRelaySpan(c *gin.Context, provider, modelName, upstreamURL string) (context.Context, trace.Span) {
 	if !common.OtelEnabled {
-		return c.Request.Context(), trace.NoopSpan{}
+		return c.Request.Context(), trace.SpanFromContext(context.Background())
 	}
 
 	ctx, span := tracing.StartSpan(c.Request.Context(), "relay_upstream",

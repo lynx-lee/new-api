@@ -4,6 +4,8 @@ package alerting
 
 import (
 	"time"
+
+	"github.com/QuantumNous/new-api/common"
 )
 
 // RuleType defines the category of an alert rule.

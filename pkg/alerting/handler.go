@@ -59,13 +59,9 @@ func NewWebhookHandler() *WebhookHandler {
 func (h *WebhookHandler) Name() string { return "webhook" }
 
 func (h *WebhookHandler) Handle(event AlertEvent) error {
-	if common.AlertingWebhookURL == "" && event.WebhookURL == "" {
-		return nil // no URL configured, silently skip
-	}
-
-	url := event.WebhookURL
+	url := common.AlertingWebhookURL
 	if url == "" {
-		url = common.AlertingWebhookURL
+		return nil // no URL configured, silently skip
 	}
 
 	payload, err := common.Marshal(event)

@@ -39,8 +39,9 @@ func (m *Manager) GetOrCreateBreaker(name string, opts ...Option) *CircuitBreake
 	if v, ok := m.breakers.Load(name); ok {
 		return v.(*CircuitBreaker)
 	}
-	v, _ := m.LoadOrStore(name, NewCircuitBreaker(name, opts...))
-	return v.(*CircuitBreaker)
+	cb := NewCircuitBreaker(name, opts...)
+	actual, _ := m.breakers.LoadOrStore(name, cb)
+	return actual.(*CircuitBreaker)
 }
 
 // GetBreaker returns an existing breaker by name, nil if not found.
