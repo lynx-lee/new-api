@@ -1,32 +1,92 @@
 package middleware
 
 import (
+	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/pkg/tracing"
 
 	"github.com/gin-gonic/gin"
-	otelgin "github.com/opentelemetry/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const otelSpanKey = "otel_span"
 
+var propagator = propagation.TraceContext{}
+
 // TracingMiddleware creates a Gin middleware for OpenTelemetry distributed tracing.
 // When OTEL_ENABLED=false, this is a no-op middleware with zero overhead.
+// Custom implementation to avoid external otelgin dependency issues.
 func TracingMiddleware() gin.HandlerFunc {
 	if !common.OtelEnabled {
 		return func(c *gin.Context) { c.Next() }
 	}
 
-	handler := otelgin.Middleware(common.OtelServiceName,
-		otelgin.WithSpanAttributes(
-			attribute.String("service", common.OtelServiceName),
-		),
-	)
-	return handler
+	return func(c *gin.Context) {
+		start := time.Now()
+		ctx := propagatorExtract(c.Request)
+		ctx, span := tracing.StartSpan(ctx, "http_request",
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(
+				semconv.HTTPRequestMethodKey.String(c.Request.Method),
+				semconv.URLFull(c.Request.URL.String()),
+				semconv.NetworkProtocolVersion("1.1"),
+				semconv.UserAgentOriginal(c.Request.UserAgent()),
+				attribute.String("service", common.OtelServiceName),
+				attribute.String("client.ip", c.ClientIP()),
+			),
+		)
+		defer span.End()
+
+		c.Request = c.Request.WithContext(ctx)
+		c.Set(otelSpanKey, span)
+
+		c.Next()
+
+		attributes := []attribute.KeyValue{
+			semconv.HTTPResponseStatusCode(c.Writer.Status()),
+			attribute.Float64("http.duration_ms", float64(time.Since(start).Microseconds())/1000),
+		}
+
+		if len(c.Errors) > 0 {
+			span.SetStatus(codes.Error, c.Errors.String())
+			span.RecordError(fmt.Errorf("gin errors: %s", c.Errors.String()))
+			attributes = append(attributes,
+				attribute.Int("error.count", len(c.Errors)),
+				attribute.String("error.message", c.Errors.Last().Error()),
+			)
+		} else if c.Writer.Status() >= http.StatusBadRequest {
+			span.SetStatus(codes.Error, strconv.Itoa(c.Writer.Status()))
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
+
+		if requestId := c.GetString(common.RequestIdKey); requestId != "" {
+			attributes = append(attributes, attribute.String("request.id", requestId))
+		}
+
+		span.SetAttributes(attributes...)
+
+		propagatorInject(ctx, c.Writer)
+	}
+}
+
+// propagatorExtract extracts trace context from incoming HTTP request headers.
+func propagatorExtract(r *http.Request) context.Context {
+	return propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+}
+
+// propagatorInject injects trace context into outgoing HTTP response headers.
+func propagatorInject(ctx context.Context, w http.ResponseWriter) {
+	propagator.Inject(ctx, propagation.HeaderCarrier(w.Header()))
 }
 
 // EnhanceSpanWithRequestContext adds business context attributes to the current span.

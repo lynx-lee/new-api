@@ -5,7 +5,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.16"
+	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
 )
 
 // newResource creates a resource with service metadata.

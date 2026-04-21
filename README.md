@@ -218,6 +218,12 @@ docker run --name new-api -d --restart always \
 - 🔄 Automatic retry on failure
 - 🚦 User-level model rate limiting
 
+**Observability & Reliability (NEW):**
+- 🔗 **Distributed Tracing** — OpenTelemetry integration with W3C TraceContext propagation, automatic span instrumentation for HTTP and relay requests
+- ⚡ **Circuit Breaker** — Per-channel error-rate-based circuit breaking with half-open probe and exponential backoff retry
+- 🚨 **Alerting Engine** — Rule-based alerting with configurable thresholds, Webhook/Log/Database notification channels, cooldown protection
+- 🎨 **Canary Release** — Weight-based and label-based traffic routing for safe gray deployments
+
 **Format Conversion:**
 - 🔄 **OpenAI Compatible ⇄ Claude Messages**
 - 🔄 **OpenAI Compatible → Google Gemini**
@@ -324,6 +330,28 @@ docker run --name new-api -d --restart always \
 | `PYROSCOPE_MUTEX_RATE` | Pyroscope mutex sampling rate | `5` |
 | `PYROSCOPE_BLOCK_RATE` | Pyroscope block sampling rate | `5` |
 | `HOSTNAME` | Hostname tag for Pyroscope | `new-api` |
+
+**OpenTelemetry Tracing (NEW):**
+| `OTEL_ENABLED` | Enable OpenTelemetry distributed tracing | `false` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP exporter endpoint | `localhost:4318` |
+| `OTEL_SERVICE_NAME` | Service name for tracing | `new-api` |
+| `OTEL_SAMPLING_RATIO` | Trace sampling ratio (0.0-1.0) | `1.0` |
+
+**Circuit Breaker (NEW):**
+| `CIRCUIT_BREAKER_ENABLED` | Enable circuit breaker protection | `true` |
+| `CIRCUIT_BREAKER_ERROR_THRESHOLD` | Error rate threshold to trip breaker (0.0-1.0) | `0.50` |
+| `CIRCUIT_BREAKER_CONSECUTIVE_FAILURES` | Consecutive failures to trip | `5` |
+| `CIRCUIT_BREAKER_TIMEOUT_SECONDS` | Open→HalfOpen wait time (seconds) | `30` |
+| `CIRCUIT_BREAKER_HALF_OPEN_MAX_REQUESTS` | Max probe requests in half-open state | `3` |
+
+**Alerting System (NEW):**
+| `ALERTING_ENABLED` | Enable alerting engine | `true` |
+| `ALERTING_WEBHOOK_URL` | Webhook URL for alert notifications | `` |
+| `ALERTING_COOLDOWN_SECONDS` | Alert cooldown in seconds | `300` |
+| `ALERTING_QUOTA_THRESHOLD` | Low quota alert threshold | `10000` |
+
+**Canary Release (NEW):**
+| `CANARY_ENABLED` | Enable canary/gray release routing | `false` |
 
 📖 **Complete configuration:** [Environment Variables Documentation](https://docs.newapi.pro/en/docs/installation/config-maintenance/environment-variables)
 
