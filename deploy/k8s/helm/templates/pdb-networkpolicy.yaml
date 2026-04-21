@@ -1,0 +1,85 @@
+{{/*
+PodDisruptionBudget to ensure availability during voluntary disruptions
+*/}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "new-api.fullname" . }}-pdb
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "new-api.selectorLabels" . | nindent 6 }}
+---
+{{/*
+NetworkPolicy to restrict traffic flow
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "new-api.fullname" . }}-network-policy
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "new-api.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        # Allow from namespace pods
+        - podSelector: {}
+        # Allow from ingress controller
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: http
+        {{- if .Values.monitoring.prometheus.enabled }}
+        - protocol: TCP
+          port: metrics
+        {{- end }}
+  egress:
+    # Allow all outbound (for upstream API calls)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if not .Values.redis.external.enabled }}
+    # Allow Redis egress
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: 6379
+    {{- end }}
+    {{- if and (.Values.postgresql.enabled) (not .Values.redis.external.enabled) }}
+    # Allow PostgreSQL egress
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}

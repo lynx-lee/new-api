@@ -1,0 +1,47 @@
+New-API has been successfully deployed!
+
+{{/*
+Get the credentials
+*/}}
+{{- if not .Values.sessionSecret }}
+WARNING: SESSION_SECRET was auto-generated. For production, set a fixed value via --set sessionSecret=<value>
+{{- end }}
+
+{{- $svcPort := .Values.service.port -}}
+
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+  {{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "new-api.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo "New-API URL: http://$NODE_IP:$NODE_PORT"
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch its status by running 'kubectl get svc -w {{ include "new-api.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "new-api.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo "New-API URL: http://$SERVICE_PORT:{{ $svcPort }}"
+{{- else if contains "ClusterIP" .Values.service.type }}
+  Run these commands to port-forward the service:
+  kubectl port-forward service/{{ include "new-api.fullname" . }} {{ $svcPort }}:{{ $svcPort }}
+  echo "New-API URL: http://127.0.0.1:{{ $svcPort }}"
+{{- end }}
+
+2. Default credentials:
+   - The default admin account is created on first visit.
+   - Visit the UI and register with an email that matches the root user pattern.
+
+3. Cluster deployment notes:
+   - SESSION_SECRET must be consistent across all pods (managed via K8s Secret).
+   - Redis is required for distributed rate limiting and cache synchronization.
+   - Set NODE_TYPE=slave for worker pods if you want dedicated master/slave topology.
+
+4. Monitoring:
+{{- if .Values.monitoring.prometheus.enabled }}
+   Prometheus metrics available at :{{ .Values.monitoring.prometheus.port }}{{ .Values.monitoring.prometheus.path }}
+{{- end }}
+{{- if .Values.monitoring.openTelemetry.enabled }}
+   OpenTelemetry tracing enabled, sending to {{ .Values.monitoring.openTelemetry.endpoint }}
+{{- end }}

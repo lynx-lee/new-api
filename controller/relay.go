@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/metrics"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay"
@@ -239,6 +240,9 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
 		logger.LogInfo(c, retryLogStr)
 	}
+
+	// Prometheus relay metrics
+	recordRelayMetrics(relayInfo, newAPIError)
 }
 
 var upgrader = websocket.Upgrader{
@@ -252,6 +256,31 @@ func addUsedChannel(c *gin.Context, channelId int) {
 	useChannel := c.GetStringSlice("use_channel")
 	useChannel = append(useChannel, fmt.Sprintf("%d", channelId))
 	c.Set("use_channel", useChannel)
+}
+
+// recordRelayMetrics 记录上游 API relay 的 Prometheus 指标
+func recordRelayMetrics(info *relaycommon.RelayInfo, err *types.NewAPIError) {
+	if info == nil {
+		return
+	}
+
+	provider := "unknown"
+	modelName := info.OriginModelName
+	statusLabel := "success"
+
+	if info.ChannelMeta != nil {
+		provider = constant.GetChannelTypeName(info.ChannelMeta.ChannelType)
+	}
+	if modelName == "" {
+		modelName = "unknown"
+	}
+	if err != nil {
+		statusLabel = "error"
+	}
+
+	duration := time.Since(info.StartTime).Seconds()
+	metrics.RelayRequestsTotal.WithLabelValues(provider, modelName, statusLabel).Inc()
+	metrics.RelayRequestDuration.WithLabelValues(provider, modelName, statusLabel).Observe(duration)
 }
 
 func fastTokenCountMetaForPricing(request dto.Request) *types.TokenCountMeta {

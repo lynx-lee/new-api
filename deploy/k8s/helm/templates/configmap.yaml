@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "new-api.fullname" . }}-config
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+data:
+  # Database DSN
+  SQL_DSN: {{ include "new-api.database.dsn" . }}
+  # Redis connection string
+  REDIS_CONN_STRING: {{ include "new-api.redis.connectionString" . }}
+  # Redis pool size
+  REDIS_POOL_SIZE: "{{ .Values.redis.poolSize }}"
+  # Node type (master runs background tasks)
+  NODE_TYPE: "{{ .Values.nodeType }}"
+  NODE_NAME: "{{ .Values.fullNameOverride | default (include \"new-api.name\" .) }}-{{ randAlphaNum 6 }}"
+  # Sync frequency for channel cache sync (seconds)
+  SYNC_FREQUENCY: "{{ .Values.syncFrequency }}"
+  # Timezone
+  TZ: "{{ .Values.timezone }}"
+  # Logging
+  LOG_DIR: "{{ .Values.logDir }}"
+  ERROR_LOG_ENABLED: "{{ .Values.errorLogEnabled }}"
+  # Batch update for billing aggregation
+  BATCH_UPDATE_ENABLED: "{{ .Values.batchUpdateEnabled }}"
+  BATCH_UPDATE_INTERVAL: "{{ .Values.batchUpdateInterval }}"
+  # Memory cache (requires Redis)
+  MEMORY_CACHE_ENABLED: "{{ .Values.memoryCacheEnabled }}"
+  # Disk cache for large request bodies
+  DISK_CACHE_ENABLED: "{{ .Values.diskCache.enabled }}"
+  DISK_CACHE_THRESHOLD_MB: "{{ .Values.diskCache.thresholdMB }}"
+  DISK_CACHE_MAX_SIZE_MB: "{{ .Values.diskCache.maxSizeMB }}"
+  DISK_CACHE_PATH: "{{ .Values.diskCache.path }}"
+  # Rate limiting
+  GLOBAL_API_RATE_LIMIT_ENABLE: "{{ .Values.rateLimit.apiEnabled }}"
+  GLOBAL_API_RATE_LIMIT: "{{ .Values.rateLimit.apiNum }}"
+  GLOBAL_API_RATE_LIMIT_DURATION: "{{ .Values.rateLimit.apiDuration }}"
+  GLOBAL_WEB_RATE_LIMIT_ENABLE: "{{ .Values.rateLimit.webEnabled }}"
+  GLOBAL_WEB_RATE_LIMIT: "{{ .Values.rateLimit.webNum }}"
+  GLOBAL_WEB_RATE_LIMIT_DURATION: "{{ .Values.rateLimit.webDuration }}"
+  CRITICAL_RATE_LIMIT_ENABLE: "{{ .Values.rateLimit.criticalEnabled }}"
+  CRITICAL_RATE_LIMIT: "{{ .Values.rateLimit.criticalNum }}"
+  CRITICAL_RATE_LIMIT_DURATION: "{{ .Values.rateLimit.criticalDuration }}"
+  SEARCH_RATE_LIMIT_ENABLE: "{{ .Values.rateLimit.searchEnabled }}"
+  SEARCH_RATE_LIMIT: "{{ .Values.rateLimit.searchNum }}"
+  SEARCH_RATE_LIMIT_DURATION: "{{ .Values.rateLimit.searchDuration }}"
+  # Streaming timeout
+  STREAMING_TIMEOUT: "{{ .Values.streamingTimeout }}"
+  # Relay configuration
+  RELAY_TIMEOUT: "{{ .Values.relayTimeout }}"
+  RELAY_MAX_IDLE_CONNS: "{{ .Values.relayMaxIdleConns }}"
+  RELAY_MAX_IDLE_CONNS_PER_HOST: "{{ .Values.relayMaxIdleConnsPerHost }}"
+  # Debug mode
+  DEBUG: "{{ .Values.debug }}"
+  # Pprof profiler
+  ENABLE_PPROF: "{{ .Values.enablePprof }}"
+{{- end -}}

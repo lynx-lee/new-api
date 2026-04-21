@@ -1,0 +1,30 @@
+apiVersion: v2
+name: new-api
+description: A Kubernetes Helm Chart for New-API - the next-generation LLM gateway and AI asset management system
+type: application
+version: 1.0.0
+appVersion: "latest"
+maintainers:
+  - name: QuantumNous
+    url: https://github.com/QuantumNous/new-api
+home: https://github.com/QuantumNous/new-api
+keywords:
+  - llm
+  - api-gateway
+  - ai
+  - openai
+  - chatgpt
+  - claude
+  - gemini
+sources:
+  - https://github.com/QuantumNous/new-api
+
+dependencies:
+  - name: redis
+    version: "^19.0.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: postgresql
+    version: "^15.0.0"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled

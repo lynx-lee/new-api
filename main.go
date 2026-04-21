@@ -24,6 +24,7 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	_ "github.com/QuantumNous/new-api/setting/performance_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"github.com/QuantumNous/new-api/metrics"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
@@ -88,6 +89,9 @@ func main() {
 		}()
 
 		go model.SyncChannelCache(common.SyncFrequency)
+
+		// 启动 Redis Pub/Sub 实时同步（K8s 多节点场景下消除缓存延迟）
+		model.InitChannelCacheSync()
 	}
 
 	// 热更新配置
@@ -166,6 +170,7 @@ func main() {
 	//server.Use(gzip.Gzip(gzip.DefaultCompression))
 	server.Use(middleware.RequestId())
 	server.Use(middleware.PoweredBy())
+	server.Use(metrics.Middleware()) // Prometheus 指标采集中间件
 	server.Use(middleware.I18n())
 	middleware.SetUpLogger(server)
 	// Initialize session store
@@ -251,6 +256,9 @@ func InitResources() error {
 
 	// 加载环境变量
 	common.InitEnv()
+
+	// 初始化 Prometheus metrics（必须在 HTTP server 启动前）
+	metrics.InitMetrics()
 
 	logger.SetupLogger()
 

@@ -237,18 +237,27 @@ func (d *diskStorage) IsDisk() bool {
 	return true
 }
 
-// CreateBodyStorage 根据数据大小创建合适的存储
+// CreateBodyStorage 根据数据大小和配置创建合适的存储
+// 优先级: Redis (集群模式) > 磁盘缓存 > 内存
 func CreateBodyStorage(data []byte) (BodyStorage, error) {
 	size := int64(len(data))
-	threshold := GetDiskCacheThresholdBytes()
+	// 优先使用 Redis 存储（K8s 集群场景，消除本地状态依赖）
+	if ShouldUseRedisBodyCache() {
+		storage, err := NewRedisBodyStorage(data)
+		if err != nil {
+			SysError(fmt.Sprintf("failed to create redis body storage, falling back: %v", err))
+			return newMemoryStorage(data), nil
+		}
+		IncrementMemoryCacheHits()
+		return storage, nil
+	}
 
-	// 检查是否应该使用磁盘缓存
+	threshold := GetDiskCacheThresholdBytes()
 	if IsDiskCacheEnabled() &&
 		size >= threshold &&
 		IsDiskCacheAvailable(size) {
 		storage, err := newDiskStorage(data, GetDiskCachePath())
 		if err != nil {
-			// 如果磁盘存储失败，回退到内存存储
 			SysError(fmt.Sprintf("failed to create disk storage, falling back to memory: %v", err))
 			return newMemoryStorage(data), nil
 		}
@@ -260,9 +269,22 @@ func CreateBodyStorage(data []byte) (BodyStorage, error) {
 
 // CreateBodyStorageFromReader 从 Reader 创建存储（用于大请求的流式处理）
 func CreateBodyStorageFromReader(reader io.Reader, contentLength int64, maxBytes int64) (BodyStorage, error) {
+	// 优先使用 Redis 存储（K8s 集群场景）
+	if ShouldUseRedisBodyCache() && contentLength > 0 {
+		storage, err := NewRedisBodyStorageFromReader(reader, maxBytes)
+		if err != nil {
+			if IsRequestBodyTooLargeError(err) {
+				return nil, err
+			}
+			SysError(fmt.Sprintf("redis body storage failed, falling back: %v", err))
+		} else {
+			IncrementMemoryCacheHits()
+			return storage, nil
+		}
+	}
+
 	threshold := GetDiskCacheThresholdBytes()
 
-	// 如果启用了磁盘缓存且内容长度超过阈值，直接使用磁盘存储
 	if IsDiskCacheEnabled() &&
 		contentLength > 0 &&
 		contentLength >= threshold &&
@@ -272,15 +294,12 @@ func CreateBodyStorageFromReader(reader io.Reader, contentLength int64, maxBytes
 			if IsRequestBodyTooLargeError(err) {
 				return nil, err
 			}
-			// 磁盘存储失败，reader 已被消费，无法安全回退
-			// 直接返回错误而非尝试回退（因为 reader 数据已丢失）
 			return nil, fmt.Errorf("disk storage creation failed: %w", err)
 		}
 		IncrementDiskCacheHits()
 		return storage, nil
 	}
 
-	// 使用内存读取
 	data, err := io.ReadAll(io.LimitReader(reader, maxBytes+1))
 	if err != nil {
 		return nil, err
@@ -293,7 +312,6 @@ func CreateBodyStorageFromReader(reader io.Reader, contentLength int64, maxBytes
 	if err != nil {
 		return nil, err
 	}
-	// 如果最终使用内存存储，记录内存缓存命中
 	if !storage.IsDisk() {
 		IncrementMemoryCacheHits()
 	} else {

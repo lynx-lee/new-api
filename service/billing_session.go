@@ -8,6 +8,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/metrics"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/types"
@@ -73,6 +74,7 @@ func (s *BillingSession) Settle(actualQuota int) error {
 		s.relayInfo.SubscriptionPostDelta += int64(delta)
 	}
 	s.settled = true
+	metrics.BillingOperationsTotal.WithLabelValues("settle").Inc()
 	return tokenErr
 }
 
@@ -85,6 +87,8 @@ func (s *BillingSession) Refund(c *gin.Context) {
 	}
 	s.refunded = true
 	s.mu.Unlock()
+
+	metrics.BillingOperationsTotal.WithLabelValues("refund").Inc()
 
 	logger.LogInfo(c, fmt.Sprintf("用户 %d 请求失败, 返还预扣费（token_quota=%s, funding=%s）",
 		s.relayInfo.UserId,

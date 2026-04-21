@@ -1,0 +1,307 @@
+# New-API Kubernetes Deployment Manifests (Standalone)
+# Usage: kubectl apply -f k8s/ -n new-api
+#
+# Prerequisites:
+#   1. Create namespace: kubectl create ns new-api
+#   2. Generate secrets: see secrets.example.yaml
+#
+# Architecture:
+#   - 2+ replicas with HPA auto-scaling (2-20 pods)
+#   - Redis for distributed cache, rate limiting, session sync
+#   - PostgreSQL for persistent data
+#   - Prometheus metrics + ServiceMonitor
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: new-api
+  labels:
+    app.kubernetes.io/name: new-api
+    app.kubernetes.io/component: gateway
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: new-api-secrets
+  namespace: new-api
+type: Opaque
+stringData:
+  # Generate these values BEFORE deploying!
+  # SESSION_SECRET: openssl rand -hex 32
+  session-secret: "CHANGE-ME-RANDOM-STRING-32-CHARS-MINIMUM"
+  crypto-secret: ""
+  db-password: "new-api-password"
+  redis-password: "new-api-redis-password"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: new-api-config
+  namespace: new-api
+data:
+  # Database DSN (update host/port if using external DB)
+  SQL_DSN: "root:new-api-password@postgresql.new-api.svc.cluster.local:5432/new-api?sslmode=disable"
+  # Redis connection string
+  REDIS_CONN_STRING: "redis://:new-api-redis-password@redis.new-api.svc.cluster.local:6379/0"
+  REDIS_POOL_SIZE: "10"
+  # Node type: master runs background tasks (batch update, channel sync)
+  NODE_TYPE: "master"
+  NODE_NAME: "new-api-k8s"
+  SYNC_FREQUENCY: "60"
+  TZ: "Asia/Shanghai"
+  LOG_DIR: "/app/logs"
+  ERROR_LOG_ENABLED: "true"
+  BATCH_UPDATE_ENABLED: "true"
+  BATCH_UPDATE_INTERVAL: "5"
+  MEMORY_CACHE_ENABLED: "true"
+  DISK_CACHE_ENABLED: "false"
+  GLOBAL_API_RATE_LIMIT_ENABLE: "true"
+  GLOBAL_API_RATE_LIMIT: "180"
+  GLOBAL_API_RATE_LIMIT_DURATION: "180"
+  GLOBAL_WEB_RATE_LIMIT_ENABLE: "true"
+  GLOBAL_WEB_RATE_LIMIT: "60"
+  GLOBAL_WEB_RATE_LIMIT_DURATION: "180"
+  CRITICAL_RATE_LIMIT_ENABLE: "true"
+  CRITICAL_RATE_LIMIT: "20"
+  CRITICAL_RATE_LIMIT_DURATION: "1200"
+  SEARCH_RATE_LIMIT_ENABLE: "true"
+  STREAMING_TIMEOUT: "300"
+  RELAY_TIMEOUT: "0"
+  RELAY_MAX_IDLE_CONNS: "500"
+  DEBUG: "false"
+  ENABLE_PPROF: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: new-api
+  namespace: new-api
+  labels:
+    app: new-api
+    component: gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: new-api
+      component: gateway
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: new-api
+        component: gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: new-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: new-api
+          image: calciumion/new-api:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/new-api"]
+          args: ["--log-dir", "/app/logs"]
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: new-api-config
+            - secretRef:
+                name: new-api-secrets
+          env:
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: new-api-secrets
+                  key: session-secret
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir:
+            sizeLimit: 512Mi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: new-api
+                    component: gateway
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: new-api
+  namespace: new-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: new-api
+  namespace: new-api
+  labels:
+    app: new-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app: new-api
+    component: gateway
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: new-api-hpa
+  namespace: new-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: new-api
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: new-api-pdb
+  namespace: new-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: new-api
+      component: gateway
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: new-api-network-policy
+  namespace: new-api
+spec:
+  podSelector:
+    matchLabels:
+      app: new-api
+      component: gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 9090
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: new-api
+  namespace: new-api
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: new-api
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
