@@ -11,13 +11,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/sdk/trace" // sdktrace
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var (
 	globalTracerProvider *trace.TracerProvider
-	globalTracer         trace.Tracer
+	globalTracer         oteltrace.Tracer
 )
 
 const tracerName = "github.com/QuantumNous/new-api"
@@ -67,7 +67,7 @@ func Init() (func(context.Context) error, error) {
 }
 
 // Tracer returns the global tracer instance.
-func Tracer() trace.Tracer {
+func Tracer() oteltrace.Tracer {
 	return globalTracer
 }
 
@@ -77,6 +77,6 @@ func Provider() *trace.TracerProvider {
 }
 
 // StartSpan is a convenience wrapper for starting a span with the global tracer.
-func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func StartSpan(ctx context.Context, name string, opts ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span) {
 	return globalTracer.Start(ctx, name, opts...)
 }
