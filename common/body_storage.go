@@ -97,7 +97,7 @@ type diskStorage struct {
 	mu       sync.Mutex
 }
 
-func newDiskStorage(data []byte, cachePath string) (*diskStorage, error) {
+func newDiskStorage(data []byte) (*diskStorage, error) {
 	// 使用统一的缓存目录管理
 	filePath, file, err := CreateDiskCacheFile(DiskCacheTypeBody)
 	if err != nil {
@@ -129,7 +129,7 @@ func newDiskStorage(data []byte, cachePath string) (*diskStorage, error) {
 	}, nil
 }
 
-func newDiskStorageFromReader(reader io.Reader, maxBytes int64, cachePath string) (*diskStorage, error) {
+func newDiskStorageFromReader(reader io.Reader, maxBytes int64) (*diskStorage, error) {
 	// 使用统一的缓存目录管理
 	filePath, file, err := CreateDiskCacheFile(DiskCacheTypeBody)
 	if err != nil {
@@ -256,7 +256,7 @@ func CreateBodyStorage(data []byte) (BodyStorage, error) {
 	if IsDiskCacheEnabled() &&
 		size >= threshold &&
 		IsDiskCacheAvailable(size) {
-		storage, err := newDiskStorage(data, GetDiskCachePath())
+		storage, err := newDiskStorage(data)
 		if err != nil {
 			SysError(fmt.Sprintf("failed to create disk storage, falling back to memory: %v", err))
 			return newMemoryStorage(data), nil
@@ -289,7 +289,7 @@ func CreateBodyStorageFromReader(reader io.Reader, contentLength int64, maxBytes
 		contentLength > 0 &&
 		contentLength >= threshold &&
 		IsDiskCacheAvailable(contentLength) {
-		storage, err := newDiskStorageFromReader(reader, maxBytes, GetDiskCachePath())
+		storage, err := newDiskStorageFromReader(reader, maxBytes)
 		if err != nil {
 			if IsRequestBodyTooLargeError(err) {
 				return nil, err
