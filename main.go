@@ -79,7 +79,7 @@ func main() {
 
 	// Initialize Alerting Engine
 	alerting.InitEngine()
-	alerting.GetEngine().Start(ctx)
+	alerting.GetEngine().Start(context.Background())
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}

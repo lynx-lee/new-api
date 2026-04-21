@@ -27,8 +27,3 @@ func Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 func SpanFromContext(ctx context.Context) trace.Span {
 	return trace.SpanFromContext(ctx)
 }
-
-// StartSpan starts a new child span with the given name and options.
-func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return Tracer().Start(ctx, name, opts...)
-}

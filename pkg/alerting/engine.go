@@ -135,11 +135,9 @@ func (e *Engine) FireEvent(event AlertEvent) {
 // dispatchEvent sends an alert to all registered handlers.
 func (e *Engine) dispatchEvent(event AlertEvent) {
 	for _, h := range e.handlers {
-		if shouldHandle(h, event.Channels) {
-			if err := h.Handle(event); err != nil {
-				logger.LogError(context.Background(),
-					fmt.Sprintf("alert handler '%s' failed: %v", h.Name(), err))
-			}
+		if err := h.Handle(event); err != nil {
+			logger.LogError(context.Background(),
+				fmt.Sprintf("alert handler '%s' failed: %v", h.Name(), err))
 		}
 	}
 }
