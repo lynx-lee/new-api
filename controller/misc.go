@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -363,4 +366,105 @@ func ResetPassword(c *gin.Context) {
 		"data":    password,
 	})
 	return
+}
+
+// UploadLogo handles logo image upload for system branding.
+// Accepts PNG, JPG, JPEG, GIF, SVG, ICO, WebP files up to 5MB.
+// Saves to web/public/uploads/logo.{timestamp}{ext} and updates the Logo option.
+func UploadLogo(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "请选择要上传的文件",
+		})
+		return
+	}
+
+	// Validate file size (max 5MB)
+	if file.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "文件大小不能超过 5MB",
+		})
+		return
+	}
+
+	// Validate file extension
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	allowedExts := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".svg": true, ".ico": true, ".webp": true}
+	if !allowedExts[ext] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "仅支持 PNG / JPG / GIF / SVG / ICO / WebP 格式",
+		})
+		return
+	}
+
+	// Determine upload directory
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		candidateDirs := []string{
+			filepath.Join(".", "web", "public", "uploads"),
+			filepath.Join("..", "web", "public", "uploads"),
+			"/app/web/public/uploads",
+			"/data/uploads",
+		}
+		for _, d := range candidateDirs {
+			if _, statErr := os.Stat(d); statErr == nil {
+				uploadDir = d
+				break
+			}
+		}
+	}
+	if uploadDir == "" {
+		uploadDir = filepath.Join(".", "web", "public", "uploads")
+	}
+
+	// Ensure upload directory exists
+	if mkdirErr := os.MkdirAll(uploadDir, 0755); mkdirErr != nil {
+		logger.LogError(c.Request.Context(), fmt.Sprintf("failed to create upload dir: %s", mkdirErr.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "无法创建上传目录",
+		})
+		return
+	}
+
+	// Generate unique filename with timestamp to avoid cache issues
+	timestamp := time.Now().Format("20060102150405")
+	filename := fmt.Sprintf("logo_%s%s", timestamp, ext)
+	savePath := filepath.Join(uploadDir, filename)
+
+	// Save uploaded file
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		logger.LogError(c.Request.Context(), fmt.Sprintf("failed to save logo file: %s", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "保存文件失败: " + err.Error(),
+		})
+		return
+	}
+
+	// Build URL path — serve via /uploads/{filename}
+	logoURL := "/uploads/" + filename
+
+	// Update Logo option in database and memory
+	if updateErr := model.UpdateOption("Logo", logoURL); updateErr != nil {
+		os.Remove(savePath)
+		logger.LogError(c.Request.Context(), fmt.Sprintf("failed to update Logo option: %s", updateErr.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "更新 Logo 设置失败",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Logo 上传成功",
+		"data": gin.H{
+			"url": logoURL,
+		},
+	})
 }

@@ -20,7 +20,6 @@ services:
     command: --log-dir /app/logs
     ports:
       - "${NEW_API_PORT:-3000}:3000"
-      - "${METRICS_PORT:-9090}:9090"
     volumes:
       - ./data:/data
       - ./logs:/app/logs
@@ -40,10 +39,6 @@ services:
       - SYNC_FREQUENCY=${SYNC_FREQUENCY:-60}
       - DEBUG=${DEBUG:-false}
       - ENABLE_PPROF=${ENABLE_PPROF:-false}
-      # Prometheus Metrics
-      - METRICS_ENABLED=${METRICS_ENABLED:-true}
-      - METRICS_PORT=${METRICS_PORT:-9090}
-      - METRICS_PATH=${METRICS_PATH:-/metrics}
       # OpenTelemetry Tracing
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
@@ -51,7 +46,10 @@ services:
       # Canary Release
       - CANARY_ENABLED=${CANARY_ENABLED:-false}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - new-api-network
     healthcheck:
@@ -104,12 +102,11 @@ services:
           cpus: '0.1'
           memory: 128M
 
-  # PostgreSQL profile — default database
+  # PostgreSQL — default database
   postgres:
     image: postgres:16-alpine
-    container_name: postgres
+    container_name: new-api-postgres
     restart: always
-    profiles: ["postgres"]  # Enable with: docker-compose --profile postgres up -d
     environment:
       POSTGRES_USER: ${DB_USER:-root}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-123456}
@@ -117,8 +114,6 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - pg_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"   # Uncomment or leave for local dev access
     networks:
       - new-api-network
     healthcheck:
@@ -141,12 +136,11 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # MySQL profile — alternative database
+  # MySQL — alternative database (disabled by default; swap SQL_DSN to use instead of postgres)
   mysql:
     image: mysql:8.4
-    container_name: mysql
+    container_name: new-api-mysql
     restart: always
-    profiles: ["mysql"]  # Enable with: docker-compose --profile mysql up -d
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
       MYSQL_DATABASE: ${DB_NAME:-new-api}
@@ -154,8 +148,6 @@ services:
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"   # Uncomment for local dev access
     networks:
       - new-api-network
     healthcheck:
