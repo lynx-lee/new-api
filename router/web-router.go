@@ -18,12 +18,15 @@ func SetWebRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {
 	router.Use(middleware.GlobalWebRateLimit())
 	router.Use(middleware.Cache())
 	router.Use(static.Serve("/", common.EmbedFolder(buildFS, "web/dist")))
+	// Serve uploaded files (logos, etc.) from web/public/uploads
+	router.Static("/uploads", "web/public/uploads")
 	router.NoRoute(func(c *gin.Context) {
 		c.Set(middleware.RouteTagKey, "web")
 		if strings.HasPrefix(c.Request.RequestURI, "/v1") ||
 			strings.HasPrefix(c.Request.RequestURI, "/api") ||
 			strings.HasPrefix(c.Request.RequestURI, "/assets") ||
-			strings.HasPrefix(c.Request.RequestURI, "/metrics") {
+			strings.HasPrefix(c.Request.RequestURI, "/metrics") ||
+			strings.HasPrefix(c.Request.RequestURI, "/uploads") {
 			controller.RelayNotFound(c)
 			return
 		}

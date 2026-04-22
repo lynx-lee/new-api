@@ -28,7 +28,9 @@ import {
   Modal,
   Input,
   Typography,
+  Upload,
 } from '@douyinfe/semi-ui';
+import { IconUpload } from '@douyinfe/semi-icons';
 import {
   compareObjects,
   API,
@@ -58,7 +60,11 @@ export default function GeneralSettings(props) {
     DemoSiteEnabled: false,
     SelfUseModeEnabled: false,
     'token_setting.max_user_tokens': 1000,
+    SystemName: '',
+    Logo: '',
   });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
@@ -103,7 +109,45 @@ export default function GeneralSettings(props) {
       });
   }
 
-  // 计算展示在输入框中的“1 USD = X <currency>”中的 X
+  async function handleLogoUpload(fileInstance) {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/webp'];
+    const allowedExts = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp'];
+    const maxSize = 5 * 1024 * 1024;
+    // 兼容部分系统 SVG 文件的 MIME type 不规范（如 text/plain / text/xml）
+    const ext = fileInstance.name ? fileInstance.name.substring(fileInstance.name.lastIndexOf('.')).toLowerCase() : '';
+    if (!allowedTypes.includes(fileInstance.type) && !allowedExts.includes(ext)) {
+      showError(t('仅支持 PNG / JPG / GIF / SVG / ICO / WebP 格式'));
+      return false;
+    }
+    if (fileInstance.size > maxSize) {
+      showError(t('文件大小不能超过 5MB'));
+      return false;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', fileInstance.file);
+      const res = await API.post('/api/option/logo/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.success && res.data.data?.url) {
+        setInputs((prev) => ({ ...prev, Logo: res.data.data.url }));
+        setLogoPreviewUrl(res.data.data.url);
+        showSuccess(t('Logo 上传成功'));
+        props?.refresh?.();
+      } else {
+        showError(res.data.message || t('上传失败'));
+      }
+    } catch (err) {
+      showError(t('上传失败') + ': ' + err.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+    return true;
+  }
+
+  // 计算展示在输入框中的"1 USD = X <currency>"中的 X
   const combinedRate = useMemo(() => {
     const type = inputs['general_setting.quota_display_type'];
     if (type === 'USD') return '1';
@@ -226,6 +270,16 @@ export default function GeneralSettings(props) {
     ) {
       currentInputs['general_setting.custom_currency_exchange_rate'] =
         props.options['general_setting.custom_currency_exchange_rate'];
+    }
+    // 回填系统名称和 Logo
+    if (props.options['SystemName'] !== undefined) {
+      currentInputs.SystemName = props.options.SystemName;
+    }
+    if (props.options['Logo'] !== undefined) {
+      currentInputs.Logo = props.options.Logo;
+      if (!logoPreviewUrl && props.options.Logo) {
+        setLogoPreviewUrl(props.options.Logo);
+      }
     }
     setInputs(currentInputs);
     setInputsRow(structuredClone(currentInputs));
@@ -402,6 +456,71 @@ export default function GeneralSettings(props) {
                   placeholder={'1000'}
                   onChange={handleFieldChange('token_setting.max_user_tokens')}
                 />
+              </Col>
+            </Row>
+            {/* 系统品牌设置 */}
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Input
+                  label={t('系统名称')}
+                  field={'SystemName'}
+                  initValue={''}
+                  placeholder={t('在此输入系统名称')}
+                  onChange={handleFieldChange('SystemName')}
+                  showClear
+                  extraText={t('修改后将更新浏览器标签页标题和页眉显示名称')}
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Slot label={t('Logo 设置')}>
+                  <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div style={{
+                      width: 120, height: 120,
+                      border: '1px solid var(--semi-color-border)',
+                      borderRadius: 8, display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden', background: 'var(--semi-color-fill-0)',
+                    }}>
+                      {(logoPreviewUrl || inputs.Logo) ? (
+                        <img
+                          src={logoPreviewUrl || inputs.Logo}
+                          alt='Logo'
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                      ) : (
+                        <Text type='tertiary'>{t('暂无 Logo')}</Text>
+                      )}
+                    </div>
+                    <div>
+                      <Upload
+                        action=''
+                        beforeUpload={handleLogoUpload}
+                        accept='.png,.jpg,.jpeg,.gif,.svg,.ico,.webp'
+                        showUploadList={false}
+                        uploading={uploadingLogo}
+                        limit={1}
+                      >
+                        <Button icon={<IconUpload />} loading={uploadingLogo}>
+                          {t('上传 Logo 图片')}
+                        </Button>
+                      </Upload>
+                      <div style={{ marginTop: 8 }}>
+                        <Text type='tertiary' size='small'>
+                          {t('支持 PNG / JPG / GIF / SVG / ICO / WebP，最大 5MB')}
+                        </Text>
+                      </div>
+                      {inputs.Logo && (
+                        <div style={{ marginTop: 4, maxWidth: 400 }}>
+                          <Text size='small' copyable={{ content: inputs.Logo }} ellipsis style={{ width: '100%' }}>
+                            URL: {inputs.Logo}
+                          </Text>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Form.Slot>
               </Col>
             </Row>
             <Row>

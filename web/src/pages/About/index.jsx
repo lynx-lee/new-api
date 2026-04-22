@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React, { useEffect, useState } from 'react';
-import { API, showError } from '../../helpers';
+import { API, showError, getSystemName } from '../../helpers';
 import { marked } from 'marked';
 import { Empty } from '@douyinfe/semi-ui';
 import {
@@ -32,6 +32,7 @@ const About = () => {
   const [about, setAbout] = useState('');
   const [aboutLoaded, setAboutLoaded] = useState(false);
   const currentYear = new Date().getFullYear();
+  const systemName = getSystemName();
 
   const displayAbout = async () => {
     setAbout(localStorage.getItem('about') || '');
@@ -78,7 +79,7 @@ const About = () => {
           rel='noopener noreferrer'
           className='!text-semi-color-primary'
         >
-          NewAPI
+          {systemName}
         </a>{' '}
         {t('© {{currentYear}}', { currentYear })}{' '}
         <a
