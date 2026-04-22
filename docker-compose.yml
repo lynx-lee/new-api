@@ -13,9 +13,9 @@
 # ⚠️  IMPORTANT: Copy .env.example to .env and change all default passwords before deploying to production!
 
 services:
-  new-api:
-    image: new-api:dev
-    container_name: new-api
+  ai-bridge:
+    image: aibridge:dev
+    container_name: aibridge
     restart: always
     command: --log-dir /app/logs
     ports:
@@ -24,12 +24,12 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=${SQL_DSN:-postgresql://${DB_USER:-root}:${DB_PASSWORD:-123456}@postgres:5432/${DB_NAME:-new-api}}
+      - SQL_DSN=${SQL_DSN:-postgresql://${DB_USER:-root}:${DB_PASSWORD:-123456}@postgres:5432/${DB_NAME:-ai-bridge}}
       - REDIS_CONN_STRING=redis://:${REDIS_PASSWORD:-123456}@redis:6379
       - TZ=${TZ:-Asia/Shanghai}
       - SESSION_SECRET=${SESSION_SECRET:-}
       - CRYPTO_SECRET=${CRYPTO_SECRET:-}
-      - NODE_NAME=new-api-node-1
+      - NODE_NAME=aibridge-node-1
       - ERROR_LOG_ENABLED=true
       - BATCH_UPDATE_ENABLED=true
       - STREAMING_TIMEOUT=${STREAMING_TIMEOUT:-300}
@@ -110,14 +110,14 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-root}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-123456}
-      POSTGRES_DB: ${DB_NAME:-new-api}
+      POSTGRES_DB: ${DB_NAME:-ai-bridge}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
       - new-api-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-root} -d ${DB_NAME:-new-api}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-root} -d ${DB_NAME:-ai-bridge}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -143,7 +143,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
-      MYSQL_DATABASE: ${DB_NAME:-new-api}
+      MYSQL_DATABASE: ${DB_NAME:-ai-bridge}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     volumes:
