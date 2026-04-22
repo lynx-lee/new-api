@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: new-api
+
+resources:
+  - k8s-full.yaml
+
+# ConfigMap generator with auto-checksum update on value changes
+configMapGenerator:
+  - name: new-api-config
+    behavior: merge
+    envs:
+      - .env.k8s
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize

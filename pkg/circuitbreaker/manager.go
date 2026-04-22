@@ -3,7 +3,7 @@ package circuitbreaker
 import (
 	"sync"
 
-	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/ai-bridge/common"
 )
 
 // Manager manages a collection of circuit breakers.

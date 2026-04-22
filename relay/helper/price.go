@@ -3,13 +3,13 @@ package helper
 import (
 	"fmt"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/model"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/logger"
+	"github.com/QuantumNous/ai-bridge/model"
+	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
+	"github.com/QuantumNous/ai-bridge/setting/operation_setting"
+	"github.com/QuantumNous/ai-bridge/setting/ratio_setting"
+	"github.com/QuantumNous/ai-bridge/types"
 
 	"github.com/gin-gonic/gin"
 )

@@ -498,6 +498,14 @@ export default function GeneralSettings(props) {
                         action=''
                         beforeUpload={handleLogoUpload}
                         accept='.png,.jpg,.jpeg,.gif,.svg,.ico,.webp'
+                        // limitType 必须显式声明，覆盖 Semi 默认从 accept 推断的逻辑
+                        // 包含所有系统可能上报的 SVG MIME type（macOS 常为 text/plain / text/xml）
+                        limitType={[
+                          'image/png', 'image/jpeg', 'image/jpg',
+                          'image/gif', 'image/svg+xml', 'image/x-icon', 'image/webp',
+                          'text/plain', 'text/xml', 'application/octet-stream',
+                          'image/svg',
+                        ]}
                         showUploadList={false}
                         uploading={uploadingLogo}
                         limit={1}

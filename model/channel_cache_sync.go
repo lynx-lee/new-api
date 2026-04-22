@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/metrics"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/metrics"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -17,13 +17,13 @@ import (
 // 解决 K8s 多 Pod 部署场景下，各节点间渠道缓存延迟不一致的问题。
 //
 // 架构：
-//   - 任一 Pod 执行渠道写操作 → 发布消息到 Redis channel:new-api-channel-sync
+//   - 任一 Pod 执行渠道写操作 → 发布消息到 Redis channel:aibridge-channel-sync
 //   - 其他 Pod 订阅该 channel → 收到消息后立即刷新本地缓存
 //   - 保留定时全量同步 (SyncChannelCache) 作为兜底
 
 const (
 	// ChannelCacheSyncTopic Redis Pub/Sub topic 名称
-	ChannelCacheSyncTopic = "new-api:channel-cache-sync"
+	ChannelCacheSyncTopic = "aibridge:channel-cache-sync"
 
 	// ChannelCacheSyncAction 全量刷新（如新建/删除渠道，需要重建索引）
 	ChannelCacheSyncActionFullRefresh = "full_refresh"

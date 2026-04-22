@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	taskcommon "github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/constant"
+	"github.com/QuantumNous/ai-bridge/dto"
+	"github.com/QuantumNous/ai-bridge/relay/channel"
+	taskcommon "github.com/QuantumNous/ai-bridge/relay/channel/task/taskcommon"
+	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
+	"github.com/QuantumNous/ai-bridge/service"
 
 	"github.com/gin-gonic/gin"
 )

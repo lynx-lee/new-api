@@ -2,15 +2,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "new-api.fullname" . }}
+  name: {{ include "ai-bridge.fullname" . }}
   labels:
-    {{- include "new-api.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+    {{- include "ai-bridge.labels" . | nindent 4 }}
   annotations:
+    # — Nginx Ingress Controller —
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
-  ingressClassName: {{ .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className | quote }}
   {{- if .Values.ingress.tls }}
   tls:
     {{- range .Values.ingress.tls }}
@@ -31,7 +33,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "new-api.fullname" $ }}
+                name: {{ include "ai-bridge.fullname" $ }}
                 port:
                   name: http
           {{- end }}

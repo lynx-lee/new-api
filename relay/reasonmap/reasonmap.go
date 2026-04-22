@@ -3,7 +3,7 @@ package reasonmap
 import (
 	"strings"
 
-	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/ai-bridge/constant"
 )
 
 func ClaudeStopReasonToOpenAIFinishReason(stopReason string) string {

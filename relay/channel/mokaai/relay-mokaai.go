@@ -5,11 +5,11 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/dto"
+	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
+	"github.com/QuantumNous/ai-bridge/service"
+	"github.com/QuantumNous/ai-bridge/types"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +52,7 @@ func embeddingResponseMoka2OpenAI(response *dto.EmbeddingResponse) *dto.OpenAIEm
 	return &openAIEmbeddingResponse
 }
 
-func mokaEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
+func mokaEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.AIBridgeError) {
 	var baiduResponse dto.EmbeddingResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {

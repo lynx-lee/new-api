@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/ai-bridge/constant"
 )
 
 var (
@@ -22,9 +22,9 @@ var (
 )
 
 func printHelp() {
-	fmt.Println("NewAPI(Based OneAPI) " + Version + " - The next-generation LLM gateway and AI asset management system supports multiple languages.")
+	fmt.Println("AI Bridge (Based OneAPI) " + Version + " - The next-generation LLM gateway and AI asset management system supports multiple languages.")
 	fmt.Println("Original Project: OneAPI by JustSong - https://github.com/songquanpeng/one-api")
-	fmt.Println("Maintainer: QuantumNous - https://github.com/QuantumNous/new-api")
+	fmt.Println("Maintainer: QuantumNous - https://github.com/QuantumNous/ai-bridge")
 	fmt.Println("Usage: newapi [--port <port>] [--log-dir <log directory>] [--version] [--help]")
 }
 
@@ -156,7 +156,7 @@ func initConstantEnv() {
 	// OpenTelemetry configuration
 	OtelEnabled = GetEnvOrDefaultBool("OTEL_ENABLED", false)
 	OtelExporterEndpoint = GetEnvOrDefaultString("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4318")
-	OtelServiceName = GetEnvOrDefaultString("OTEL_SERVICE_NAME", "new-api")
+	OtelServiceName = GetEnvOrDefaultString("OTEL_SERVICE_NAME", "ai-bridge")
 	OtelSamplingRatio = GetEnvOrDefaultFloat64("OTEL_SAMPLING_RATIO", 1.0)
 
 	// Circuit Breaker configuration

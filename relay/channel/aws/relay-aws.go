@@ -9,19 +9,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/claude"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/relay/helper"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/dto"
+	"github.com/QuantumNous/ai-bridge/relay/channel"
+	"github.com/QuantumNous/ai-bridge/relay/channel/claude"
+	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
+	"github.com/QuantumNous/ai-bridge/relay/helper"
+	"github.com/QuantumNous/ai-bridge/service"
+	"github.com/QuantumNous/ai-bridge/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 
-	"github.com/QuantumNous/new-api/setting/model_setting"
+	"github.com/QuantumNous/ai-bridge/setting/model_setting"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -221,7 +221,7 @@ func getAwsModelID(requestModel string) string {
 	return requestModel
 }
 
-func awsHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.NewAPIError, *dto.Usage) {
+func awsHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.AIBridgeError, *dto.Usage) {
 
 	ctx, cancel := newAwsInvokeContext()
 	defer cancel()
@@ -252,7 +252,7 @@ func awsHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types
 	return nil, claudeInfo.Usage
 }
 
-func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.NewAPIError, *dto.Usage) {
+func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.AIBridgeError, *dto.Usage) {
 	ctx, cancel := newAwsInvokeContext()
 	defer cancel()
 
@@ -294,7 +294,7 @@ func awsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (
 }
 
 // Nova模型处理函数
-func handleNovaRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.NewAPIError, *dto.Usage) {
+func handleNovaRequest(c *gin.Context, info *relaycommon.RelayInfo, a *Adaptor) (*types.AIBridgeError, *dto.Usage) {
 
 	ctx, cancel := newAwsInvokeContext()
 	defer cancel()

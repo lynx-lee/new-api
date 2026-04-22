@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "new-api.fullname" . }}
+  name: {{ include "ai-bridge.fullname" . }}
   labels:
-    {{- include "new-api.labels" . | nindent 4 }}
+    {{- include "ai-bridge.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "new-api.fullname" . }}
+    name: {{ include "ai-bridge.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

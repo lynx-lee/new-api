@@ -13,24 +13,24 @@ import (
 
 	"context"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/controller"
-	"github.com/QuantumNous/new-api/i18n"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/metrics"
-	"github.com/QuantumNous/new-api/middleware"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/oauth"
-	"github.com/QuantumNous/new-api/relay"
-	"github.com/QuantumNous/new-api/router"
-	"github.com/QuantumNous/new-api/service"
-	"github.com/QuantumNous/new-api/pkg/alerting"
-	"github.com/QuantumNous/new-api/pkg/canary"
-	"github.com/QuantumNous/new-api/pkg/circuitbreaker"
-	"github.com/QuantumNous/new-api/pkg/tracing"
-	_ "github.com/QuantumNous/new-api/setting/performance_setting"
-	"github.com/QuantumNous/new-api/setting/ratio_setting"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/constant"
+	"github.com/QuantumNous/ai-bridge/controller"
+	"github.com/QuantumNous/ai-bridge/i18n"
+	"github.com/QuantumNous/ai-bridge/logger"
+	"github.com/QuantumNous/ai-bridge/metrics"
+	"github.com/QuantumNous/ai-bridge/middleware"
+	"github.com/QuantumNous/ai-bridge/model"
+	"github.com/QuantumNous/ai-bridge/oauth"
+	"github.com/QuantumNous/ai-bridge/relay"
+	"github.com/QuantumNous/ai-bridge/router"
+	"github.com/QuantumNous/ai-bridge/service"
+	"github.com/QuantumNous/ai-bridge/pkg/alerting"
+	"github.com/QuantumNous/ai-bridge/pkg/canary"
+	"github.com/QuantumNous/ai-bridge/pkg/circuitbreaker"
+	"github.com/QuantumNous/ai-bridge/pkg/tracing"
+	_ "github.com/QuantumNous/ai-bridge/setting/performance_setting"
+	"github.com/QuantumNous/ai-bridge/setting/ratio_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
@@ -56,7 +56,7 @@ func main() {
 		return
 	}
 
-	common.SysLog("New API " + common.Version + " started")
+	common.SysLog("AI Bridge " + common.Version + " started")
 
 	// Initialize OpenTelemetry tracing
 	otelShutdown, err := tracing.Init()
@@ -190,8 +190,8 @@ func main() {
 		common.SysLog(fmt.Sprintf("panic detected: %v", err))
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/Calcium-Ion/new-api", err),
-				"type":    "new_api_panic",
+				"message": fmt.Sprintf("Panic detected, error: %v. Please submit a issue here: https://github.com/QuantumNous/ai-bridge", err),
+				"type":    "ai_bridge_panic",
 			},
 		})
 	}))

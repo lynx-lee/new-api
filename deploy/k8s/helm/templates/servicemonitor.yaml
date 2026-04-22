@@ -1,0 +1,18 @@
+{{- if .Values.monitoring.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ai-bridge.fullname" . }}
+  labels:
+    {{- include "ai-bridge.labels" . | nindent 4 }}
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      {{- include "ai-bridge.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      path: {{ .Values.monitoring.prometheus.path }}
+      interval: 15s
+      scrapeTimeout: 10s
+{{- end }}

@@ -1,0 +1,448 @@
+# ============================================================
+# New-API Kubernetes Standalone Manifest
+#
+# Target Architecture:
+#   DNS/LB → Ingress (Nginx) → Service → Deployment (N replicas)
+#                                                    ↓
+#                         Redis Cluster | PostgreSQL Cluster | Prometheus
+#
+# Prerequisites:
+#   1. K8s cluster with Nginx Ingress Controller installed
+#   2. External PostgreSQL Cluster reachable from cluster
+#   3. External Redis Cluster reachable from cluster
+#   4. Prometheus Operator installed (for ServiceMonitor)
+#
+# Deploy: kubectl apply -k deploy/k8s/standalone/
+#         (or: kubectl apply -f deploy/k8s/standalone/k8s-deployment.yaml)
+# ============================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+    app.kubernetes.io/component: namespace
+---
+# ============================================================
+# Secret — sensitive configuration
+# Generate secrets before applying:
+#   kubectl -n ai-bridge create secret generic ai-bridge-secret \
+#     --from-literal=session-secret=$(openssl rand -hex 32) \
+#     --from-literal=crypto-secret=$(openssl rand -hex 32) \
+#     --from-literal=db-password=<YOUR_DB_PASSWORD> \
+#     --from-literal=redis-password=<YOUR_REDIS_PASSWORD>
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-bridge-secret
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+    app.kubernetes.io/instance: production
+type: Opaque
+stringData:
+  session-secret: "CHANGE-ME-RANDOM-STRING-MIN-32-CHARS"     # openssl rand -hex 32
+  crypto-secret: ""                                           # optional, leave empty if unused
+  db-password: "CHANGE-ME-DB-PASSWORD"
+  redis-password: "CHANGE-ME-REDIS-PASSWORD"
+---
+# ============================================================
+# ConfigMap — application configuration
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-bridge-config
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+    app.kubernetes.io/instance: production
+data:
+  # — Database DSN (external PostgreSQL Cluster) —
+  SQL_DSN: "newapi_app:$(DB_PASSWORD)@tcp(pg-cluster-host:5432)/newapi_prod?charset=utf8mb4&parseTime=True&loc=Local&tls=true"
+  # — Redis Connection (External Redis Cluster) —
+  REDIS_CONN_STRING: "redis://:$(REDIS_PASSWORD)@redis-cluster-host:6379/0"
+  REDIS_POOL_SIZE: "20"
+  # — Node identity —
+  NODE_TYPE: "master"
+  NODE_NAME: "ai-bridge-prod"
+  SYNC_FREQUENCY: "30"
+  TZ: "Asia/Shanghai"
+  LOG_DIR: "/app/logs"
+  ERROR_LOG_ENABLED: "true"
+  BATCH_UPDATE_ENABLED: "true"
+  MEMORY_CACHE_ENABLED: "true"
+  DEBUG: "false"
+  ENABLE_PPROF: "false"
+  STREAMING_TIMEOUT: "300"
+  RELAY_TIMEOUT: "0"
+  RELAY_MAX_IDLE_CONNS: "500"
+  RELAY_MAX_IDLE_CONNS_PER_HOST: "100"
+  # — Rate Limiting —
+  GLOBAL_API_RATE_LIMIT_ENABLE: "true"
+  GLOBAL_API_RATE_LIMIT: "180"
+  GLOBAL_API_RATE_LIMIT_DURATION: "180"
+  GLOBAL_WEB_RATE_LIMIT_ENABLE: "true"
+  GLOBAL_WEB_RATE_LIMIT: "60"
+  GLOBAL_WEB_RATE_LIMIT_DURATION: "180"
+  CRITICAL_RATE_LIMIT_ENABLE: "true"
+  CRITICAL_RATE_LIMIT: "20"
+  CRITICAL_RATE_LIMIT_DURATION: "1200"
+---
+# ============================================================
+# ServiceAccount & RBAC
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-bridge
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+automountServiceAccountToken: false
+---
+# ============================================================
+# Deployment — core application pods
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-bridge
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+    app.kubernetes.io/instance: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-bridge
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        checksum/config: "SHA256_PLACEHOLDER"  # will be auto-updated by kustomize or manual
+        checksum/secret: "SHA256_PLACEHOLDER"
+      labels:
+        app.kubernetes.io/name: ai-bridge
+        app.kubernetes.io/instance: production
+    spec:
+      serviceAccountName: ai-bridge
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: ai-bridge
+          image: your-registry/ai-bridge:v1.0.0
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command: ["/ai-bridge"]
+          args: ["--log-dir", "/app/logs"]
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ai-bridge-config
+            - secretRef:
+                name: ai-bridge-secret
+          env:
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ai-bridge-secret
+                  key: session-secret
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ai-bridge-secret
+                  key: db-password
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ai-bridge-secret
+                  key: redis-password
+          startupProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: "200m"
+              memory: 256Mi
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: ai-bridge
+                topologyKey: kubernetes.io/hostname
+---
+# ============================================================
+# Service — internal cluster access
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-bridge
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9090
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app.kubernetes.io/name: ai-bridge
+---
+# ============================================================
+# Ingress — Nginx Ingress Controller entrypoint
+# ============================================================
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-bridge
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/limit-rps: "200"
+    nginx.ingress.kubernetes.io/limit-connections: "500"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      proxy_buffering off;
+      proxy_cache off;
+      chunked_transfer_encoding on;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.yourdomain.com
+      secretName: ai-bridge-tls
+  rules:
+    - host: api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-bridge
+                port:
+                  name: http
+{{- end }}
+---
+# ============================================================
+# HPA — Horizontal Pod Autoscaler
+# ============================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-bridge-hpa
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-bridge
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+---
+# ============================================================
+# PDB — PodDisruptionBudget (ensure availability during updates)
+# ============================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-bridge-pdb
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-bridge
+---
+# ============================================================
+# NetworkPolicy — defense in depth
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-bridge-network-policy
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ai-bridge
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Outbound HTTPS for upstream AI APIs
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # External Redis
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 6379
+    # External PostgreSQL
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# ============================================================
+# ServiceMonitor — Prometheus scraping (requires prometheus-operator)
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-bridge
+  namespace: ai-bridge
+  labels:
+    app.kubernetes.io/name: ai-bridge
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-bridge
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/types"
 	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -87,7 +87,7 @@ func AsParamOverrideReturnError(err error) (*ParamOverrideReturnError, bool) {
 	return nil, false
 }
 
-func NewAPIErrorFromParamOverride(err *ParamOverrideReturnError) *types.NewAPIError {
+func AIBridgeErrorFromParamOverride(err *ParamOverrideReturnError) *types.AIBridgeError {
 	if err == nil {
 		return types.NewError(
 			errors.New("param override return error is nil"),
@@ -116,7 +116,7 @@ func NewAPIErrorFromParamOverride(err *ParamOverrideReturnError) *types.NewAPIEr
 		message = "request blocked by param override"
 	}
 
-	opts := make([]types.NewAPIErrorOptions, 0, 1)
+	opts := make([]types.AIBridgeErrorOptions, 0, 1)
 	if err.SkipRetry {
 		opts = append(opts, types.ErrOptionWithSkipRetry())
 	}

@@ -3,7 +3,7 @@ package tracing
 import (
 	"context"
 
-	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/ai-bridge/common"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.16.0"
 )

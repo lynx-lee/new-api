@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "new-api.fullname" . }}
+  name: {{ include "ai-bridge.fullname" . }}
   labels:
-    {{- include "new-api.labels" . | nindent 4 }}
+    {{- include "ai-bridge.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -18,24 +18,4 @@ spec:
       name: metrics
     {{- end }}
   selector:
-    {{- include "new-api.selectorLabels" . | nindent 4 }}
----
-{{- if .Values.monitoring.prometheus.enabled }}
----
-apiVersion: v1
-kind: ServiceMonitor
-metadata:
-  name: {{ include "new-api.fullname" . }}
-  labels:
-    {{- include "new-api.labels" . | nindent 4 }}
-    release: prometheus
-spec:
-  selector:
-    matchLabels:
-      {{- include "new-api.selectorLabels" . | nindent 6 }}
-  endpoints:
-    - port: metrics
-      path: {{ .Values.monitoring.prometheus.path }}
-      interval: 15s
-      scrapeTimeout: 10s
-{{- end }}
+    {{- include "ai-bridge.selectorLabels" . | nindent 4 }}

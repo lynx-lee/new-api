@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/model"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"

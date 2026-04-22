@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/metrics"
-	"github.com/QuantumNous/new-api/middleware"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/metrics"
+	"github.com/QuantumNous/ai-bridge/middleware"
 
 	"github.com/gin-gonic/gin"
 )

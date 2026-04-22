@@ -1,4 +1,4 @@
-# New-API Deployment Guide
+# AI-Bridge Deployment Guide
 
 This project supports two production deployment methods: **Docker Compose** (single-host) and **Kubernetes** (cluster). Both provide full-featured deployments with PostgreSQL, Redis, health checks, and Prometheus monitoring.
 
@@ -33,8 +33,8 @@ This project supports two production deployment methods: **Docker Compose** (sin
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/QuantumNous/new-api.git
-cd new-api
+git clone https://github.com/QuantumNous/ai-bridge.git
+cd ai-bridge
 
 # 2. Create environment file from template
 cp deploy/.env.example .env
@@ -62,7 +62,7 @@ All configuration is managed via `.env` file. Key variables:
 | `DB_PASSWORD` | Database password (PostgreSQL or MySQL) | `123456` — MUST change |
 | `REDIS_PASSWORD` | Redis auth password | `123456` — MUST change |
 | `SESSION_SECRET` | Cluster session secret (generate with `openssl rand -hex 32`) | Auto-generated per start |
-| `NEW_API_PORT` | Application HTTP port | 3000 |
+| `AI_BRIDGE_PORT` | Application HTTP port | 3000 |
 | `METRICS_PORT` | Prometheus metrics port | 9090 |
 | `STREAMING_TIMEOUT` | Streaming response timeout (seconds) | 300 |
 | `METRICS_ENABLED` | Enable Prometheus metrics endpoint | true |
@@ -74,10 +74,10 @@ Full variable list: see `deploy/.env.example`.
 
 ```bash
 # View logs
-docker compose logs -f new-api
+docker compose logs -f ai-bridge
 
 # Scale application (requires load balancer in front)
-docker compose up -d --scale new-api=3
+docker compose up -d --scale ai-bridge=3
 
 # Stop everything
 docker compose down
@@ -86,8 +86,8 @@ docker compose down
 docker compose down -v
 
 # Rebuild with local image
-docker build -t new-api-local:latest .
-# Then edit docker-compose.yml to use image: new-api-local:latest
+docker build -t ai-bridge-local:latest .
+# Then edit docker-compose.yml to use image: ai-bridge-local:latest
 docker compose up -d
 ```
 
@@ -123,15 +123,15 @@ SQL_DSN=root:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}
 
 ```bash
 # Add Helm repository (when published)
-helm repo add new-api https://charts.example.com/new-api
+helm repo add ai-bridge https://charts.example.com/ai-bridge
 helm repo update
 
 # Create namespace
-kubectl create namespace new-api
+kubectl create namespace ai-bridge
 
 # Install with default values (includes Bitnami PostgreSQL + Redis)
-helm install new-api new-api/new-api \
-  -n new-api \
+helm install ai-bridge ai-bridge/ai-bridge \
+  -n ai-bridge \
   --set sessionSecret=$(openssl rand -hex 32) \
   --set database.password="your-db-password" \
   --set redis.auth.password="your-redis-password"
@@ -143,8 +143,8 @@ helm install new-api new-api/new-api \
 cd deploy/k8s/helm
 
 # Install with defaults
-helm install new-api . \
-  -n new-api \
+helm install ai-bridge . \
+  -n ai-bridge \
   --set sessionSecret=$(openssl rand -hex 32) \
   --set database.password="your-db-password" \
   --set redis.auth.password="your-redis-password"
@@ -171,7 +171,7 @@ resources:
     memory: 256Mi
 EOF
 
-helm install new-api . -n new-api -f my-values.yaml
+helm install ai-bridge . -n ai-bridge -f my-values.yaml
 ```
 
 ### Using External Database / Redis
@@ -179,7 +179,7 @@ helm install new-api . -n new-api -f my-values.yaml
 When your cluster already has managed databases:
 
 ```bash
-helm install new-api . -n newapi \
+helm install ai-bridge . -n aibridge \
   --set sessionSecret=$(openssl rand -hex 32) \
   --set postgresql.enabled=false \
   --set redis.enabled=false \
@@ -187,7 +187,7 @@ helm install new-api . -n newapi \
   --set redis.external.host="your-redis-host" \
   --set redis.external.port=6379 \
   --set redis.external.password="your-redis-pwd" \
-  --set database.dsn="postgresql://user:pwd@external-db-host:5432/newapi?sslmode=require"
+  --set database.dsn="postgresql://user:pwd@external-db-host:5432/aibridge?sslmode=require"
 ```
 
 ### Helm Values Reference
@@ -211,16 +211,16 @@ See `deploy/k8s/helm/values.yaml` for complete list. Key groups:
 
 ```bash
 # Upgrade after values change
-helm upgrade new-api . -n new-api -f my-values.yaml
+helm upgrade ai-bridge . -n ai-bridge -f my-values.yaml
 
 # Rollback to previous version
-helm rollback new-api 1 -n new-api
+helm rollback ai-bridge 1 -n ai-bridge
 
 # Uninstall completely
-helm uninstall new-api -n new-api
+helm uninstall ai-bridge -n ai-bridge
 
 # Debug: render templates without installing
-helm template new-api . -n new-api -f my-values.yaml > rendered.yaml
+helm template ai-bridge . -n ai-bridge -f my-values.yaml > rendered.yaml
 ```
 
 ---
@@ -240,7 +240,7 @@ For environments without Helm, use the self-contained YAML manifests that includ
 ```bash
 # 1. Edit secrets first!
 # Open deploy/k8s/standalone/k8s-deployment.yaml and change:
-#   - session-secret under new-api-secrets
+#   - session-secret under ai-bridge-secrets
 #   - db-password
 #   - redis-password
 
@@ -248,10 +248,10 @@ For environments without Helm, use the self-contained YAML manifests that includ
 kubectl apply -f deploy/k8s/standalone/k8s-deployment.yaml
 
 # 3. Watch pods become ready
-kubectl get pods -n new-api -w
+kubectl get pods -n ai-bridge -w
 
 # 4. Port-forward for local access
-kubectl port-forward svc/new-api -n new-api 3000:3000
+kubectl port-forward svc/ai-bridge -n ai-bridge 3000:3000
 # Open http://localhost:3000
 ```
 
@@ -261,18 +261,18 @@ The standalone manifest deploys these resources in order:
 
 | Resource | Purpose |
 |----------|---------|
-| Namespace (`new-api`) | Isolated deployment namespace |
-| Secret (`new-api-secrets`) | Credentials for app, DB, Redis |
+| Namespace (`ai-bridge`) | Isolated deployment namespace |
+| Secret (`ai-bridge-secrets`) | Credentials for app, DB, Redis |
 | Deployment (`postgresql`) | PostgreSQL 16 with PVC persistence |
 | Deployment (`redis`) | Redis 7 with AOF persistence |
-| ConfigMap (`new-api-config`) | Application environment variables |
-| Deployment (`new-api`) | Application (3 replicas, anti-affinity) |
-| ServiceAccount (`new-api`) | Identity for pod service account |
-| Service (`new-api`) | ClusterIP exposing ports 3000 + 9090 |
-| HPA (`new-api-hpa`) | Auto-scale 2-20 pods by CPU/Memory |
-| PDB (`new-api-pdb`) | Guarantee min 1 available during disruption |
-| NetworkPolicy (`new-api-network-policy`) | Restrict ingress/egress traffic |
-| ServiceMonitor (`new-api`) | Prometheus metrics scraping |
+| ConfigMap (`ai-bridge-config`) | Application environment variables |
+| Deployment (`ai-bridge`) | Application (3 replicas, anti-affinity) |
+| ServiceAccount (`ai-bridge`) | Identity for pod service account |
+| Service (`ai-bridge`) | ClusterIP exposing ports 3000 + 9090 |
+| HPA (`ai-bridge-hpa`) | Auto-scale 2-20 pods by CPU/Memory |
+| PDB (`ai-bridge-pdb`) | Guarantee min 1 available during disruption |
+| NetworkPolicy (`ai-bridge-network-policy`) | Restrict ingress/egress traffic |
+| ServiceMonitor (`ai-bridge`) | Prometheus metrics scraping |
 
 ### Cleanup
 
@@ -326,17 +326,17 @@ Before deploying to production, ensure you have completed:
 
 | Issue | Solution |
 |-------|----------|
-| Container restart loop | `docker compose logs new-api` — check DB connection string |
+| Container restart loop | `docker compose logs ai-bridge` — check DB connection string |
 | Database connection refused | Ensure DB profile is active: `--profile postgres` or `--profile mysql` |
 | Permission denied on `./data` | `chmod 777 ./data` or adjust volume mount owner |
-| Port already in use | Change `NEW_API_PORT` in `.env` |
+| Port already in use | Change `AI_BRIDGE_PORT` in `.env` |
 
 ### Kubernetes
 
 | Issue | Solution |
 |-------|----------|
-| Pod stuck in `Pending` | Check PVC binding: `kubectl describe pvc -n new-api` |
+| Pod stuck in `Pending` | Check PVC binding: `kubectl describe pvc -n ai-bridge` |
 | Pod `CrashLoopBackOff` | Check init containers: DB/Redis might not be ready yet |
-| 502 from Ingress | Verify Service endpoints: `kubectl get endpoints new-api -n new-api` |
+| 502 from Ingress | Verify Service endpoints: `kubectl get endpoints ai-bridge -n ai-bridge` |
 | Metrics not scraped | Confirm ServiceMonitor selector matches pod labels |
-| HPA not scaling | Check current CPU/Memory utilization: `kubectl top pods -n new-api` |
+| HPA not scaling | Check current CPU/Memory utilization: `kubectl top pods -n ai-bridge` |

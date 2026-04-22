@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/QuantumNous/new-api/dto"
+	"github.com/QuantumNous/ai-bridge/dto"
 )
 
 func ResponsesResponseToChatCompletionsResponse(resp *dto.OpenAIResponsesResponse, id string) (*dto.OpenAITextResponse, *dto.Usage, error) {

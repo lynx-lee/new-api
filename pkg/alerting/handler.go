@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/logger"
 )
 
 // EventHandler defines the interface for alert notification handlers.
@@ -77,7 +77,7 @@ func (h *WebhookHandler) Handle(event AlertEvent) error {
 		return fmt.Errorf("create webhook request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "new-api-alerting/1.0")
+	req.Header.Set("User-Agent", "aibridge-alerting/1.0")
 
 	resp, err := h.client.Do(req)
 	if err != nil {

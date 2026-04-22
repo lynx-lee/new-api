@@ -12,7 +12,7 @@ import (
 )
 
 // RedisBodyCachePrefix Redis 中请求体缓存的 key 前缀
-const RedisBodyCachePrefix = "newapi:bodycache:"
+const RedisBodyCachePrefix = "aibridge:bodycache:"
 
 // DefaultRedisBodyTTL Redis 缓存默认 TTL，5 分钟足够覆盖一个请求的生命周期
 const DefaultRedisBodyTTL = 300 // seconds

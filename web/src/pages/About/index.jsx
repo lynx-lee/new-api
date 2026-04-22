@@ -63,18 +63,18 @@ const About = () => {
   const customDescription = (
     <div style={{ textAlign: 'center' }}>
       <p>{t('可在设置页面设置关于内容，支持 HTML & Markdown')}</p>
-      {t('New API项目仓库地址：')}
+      {t('AI Bridge项目仓库地址：')}
       <a
-        href='https://github.com/QuantumNous/new-api'
+        href='https://github.com/QuantumNous/ai-bridge'
         target='_blank'
         rel='noopener noreferrer'
         className='!text-semi-color-primary'
       >
-        https://github.com/QuantumNous/new-api
+        https://github.com/QuantumNous/ai-bridge
       </a>
       <p>
         <a
-          href='https://github.com/QuantumNous/new-api'
+          href='https://github.com/QuantumNous/ai-bridge'
           target='_blank'
           rel='noopener noreferrer'
           className='!text-semi-color-primary'

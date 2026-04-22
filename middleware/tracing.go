@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/pkg/tracing"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/constant"
+	"github.com/QuantumNous/ai-bridge/pkg/tracing"
 
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"

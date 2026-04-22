@@ -1,7 +1,7 @@
 {
-  "name": "new-api-electron",
+  "name": "ai-bridge-electron",
   "version": "1.0.0",
-  "description": "New API - AI Model Gateway Desktop Application",
+  "description": "AI Bridge - AI Model Gateway Desktop Application",
   "main": "main.js",
   "scripts": {
     "start-app": "electron .",
@@ -21,7 +21,7 @@
   "author": "QuantumNous",
   "repository": {
     "type": "git",
-    "url": "https://github.com/QuantumNous/new-api"
+    "url": "https://github.com/QuantumNous/ai-bridge"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
@@ -29,8 +29,8 @@
     "electron-builder": "^26.7.0"
   },
   "build": {
-    "appId": "com.newapi.desktop",
-    "productName": "New-API-App",
+    "appId": "com.aibridge.desktop",
+    "productName": "AI-Bridge-App",
     "publish": null,
     "directories": {
       "output": "dist"
@@ -57,8 +57,8 @@
       ],
       "extraResources": [
         {
-          "from": "../new-api",
-          "to": "bin/new-api"
+          "from": "../ai-bridge",
+          "to": "bin/ai-bridge"
         },
         {
           "from": "../web/dist",
@@ -88,8 +88,8 @@
       "category": "Development",
       "extraResources": [
         {
-          "from": "../new-api",
-          "to": "bin/new-api"
+          "from": "../ai-bridge",
+          "to": "bin/ai-bridge"
         }
       ]
     },

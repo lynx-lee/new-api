@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/logger"
-	relaycommon "github.com/QuantumNous/new-api/relay/common"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/constant"
+	"github.com/QuantumNous/ai-bridge/logger"
+	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
+	"github.com/QuantumNous/ai-bridge/setting/operation_setting"
 
-	"github.com/QuantumNous/new-api/metrics"
+	"github.com/QuantumNous/ai-bridge/metrics"
 
 	"github.com/bytedance/gopkg/util/gopool"
 

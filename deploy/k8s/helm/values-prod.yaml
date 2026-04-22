@@ -1,0 +1,149 @@
+# ============================================================
+# Production values for ai-bridge Helm Chart
+# Usage: helm install ai-bridge ./deploy/k8s/helm -f deploy/k8s/helm/values-prod.yaml
+# ============================================================
+
+replicaCount: 3
+
+image:
+  repository: your-registry/ai-bridge
+  pullPolicy: Always
+  tag: "v1.0.0"  # pin to specific version in production
+
+imagePullSecrets:
+  - name: registry-credentials
+
+# — Resources (production-grade) —
+resources:
+  limits:
+    cpu: "2"
+    memory: 1Gi
+  requests:
+    cpu: "200m"
+    memory: 256Mi
+
+serviceAccount:
+  create: true
+  automount: false  # disable SA token mount if not needed
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# — Ingress (production with TLS) —
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "200"
+    nginx.ingress.kubernetes.io/limit-connections: "500"
+    # Timeouts for streaming LLM responses
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    # Body size
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # Security headers + SSE buffering
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      proxy_buffering off;
+      proxy_cache off;
+      chunked_transfer_encoding on;
+    # SSL / TLS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ai-bridge-tls
+      hosts:
+        - api.yourdomain.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 50
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector:
+  kubernetes.io/arch: amd64
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ai-bridge
+          topologyKey: kubernetes.io/hostname
+
+# — Database: External PostgreSQL Cluster —
+database:
+  type: postgresql
+  external:
+    enabled: true
+    host: postgres-cluster.example.com
+    port: 5432
+    database: aibridge_prod
+    user: aibridge_app
+    password: ""  # use --set or existing secret
+    sslMode: require
+    maxOpenConns: 100
+    maxIdleConns: 20
+    connMaxLifetime: 300
+
+postgresql:
+  disabled: false  # keep available but not used when external.enabled=true
+
+# — Redis: External Cluster —
+redis:
+  enabled: false  # using external Redis Cluster
+  external:
+    enabled: true
+    host: redis-cluster.example.com
+    port: 6379
+    password: ""
+    db: 0
+
+# — Secrets (MUST set via --set or external secret management) —
+sessionSecret: ""  # helm install ... --set sessionSecret=$(openssl rand -hex 32)
+cryptoSecret: ""
+
+# — Monitoring —
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    path: /metrics
+  openTelemetry:
+    enabled: true
+    endpoint: "otel-collector.monitoring:4317"
+    insecure: false
+
+# — Performance tuning —
+streamingTimeout: 300
+relayTimeout: 0
+relayMaxIdleConns: 500
+relayMaxIdleConnsPerHost: 100
+syncFrequency: 30
+
+debug: false
+enablePprof: false
+memoryCacheEnabled: true

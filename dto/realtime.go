@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/QuantumNous/new-api/types"
+import "github.com/QuantumNous/ai-bridge/types"
 
 const (
 	RealtimeEventTypeError              = "error"

@@ -1,13 +1,13 @@
 apiVersion: v2
-name: new-api
-description: A Kubernetes Helm Chart for New-API - the next-generation LLM gateway and AI asset management system
+name: ai-bridge
+description: A Kubernetes Helm Chart for AI-Bridge - the next-generation LLM gateway and AI asset management system
 type: application
 version: 1.0.0
 appVersion: "latest"
 maintainers:
   - name: QuantumNous
-    url: https://github.com/QuantumNous/new-api
-home: https://github.com/QuantumNous/new-api
+    url: https://github.com/QuantumNous/ai-bridge
+home: https://github.com/QuantumNous/ai-bridge
 keywords:
   - llm
   - api-gateway
@@ -17,7 +17,7 @@ keywords:
   - claude
   - gemini
 sources:
-  - https://github.com/QuantumNous/new-api
+  - https://github.com/QuantumNous/ai-bridge
 
 dependencies:
   - name: redis

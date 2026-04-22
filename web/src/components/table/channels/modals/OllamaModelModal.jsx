@@ -335,7 +335,7 @@ const OllamaModelModal = ({
       const fetchHeaders = {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
-        'New-API-User': String(userId),
+        'Ai-Bridge-User': String(userId),
         ...authHeaders,
       };
 

@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/ai-bridge/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
@@ -20,7 +20,7 @@ var (
 	globalTracer         oteltrace.Tracer
 )
 
-const tracerName = "github.com/QuantumNous/new-api"
+const tracerName = "github.com/QuantumNous/ai-bridge"
 
 // Init initializes the global TracerProvider based on environment config.
 // Returns a shutdown function that should be called on application exit.

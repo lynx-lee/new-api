@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/i18n"
+	"github.com/QuantumNous/ai-bridge/logger"
+	"github.com/QuantumNous/ai-bridge/model"
 	"github.com/gin-gonic/gin"
 )
 

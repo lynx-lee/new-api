@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "new-api.fullname" . }}
+  name: {{ include "ai-bridge.fullname" . }}
   labels:
-    {{- include "new-api.labels" . | nindent 4 }}
+    {{- include "ai-bridge.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "new-api.selectorLabels" . | nindent 6 }}
+      {{- include "ai-bridge.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -20,13 +20,13 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "new-api.selectorLabels" . | nindent 8 }}
+        {{- include "ai-bridge.selectorLabels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
       {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ include "new-api.fullname" . }}
+      serviceAccountName: {{ include "ai-bridge.fullname" . }}
       {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -53,21 +53,21 @@ spec:
             {{- end }}
           envFrom:
             - configMapRef:
-                name: {{ include "new-api.fullname" . }}-config
+                name: {{ include "ai-bridge.fullname" . }}-config
             - secretRef:
-                name: {{ include "new-api.fullname" . }}-secret
+                name: {{ include "ai-bridge.fullname" . }}-secret
           env:
             # SESSION_SECRET from secret (must be consistent across all pods)
             - name: SESSION_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "new-api.fullname" . }}-secret
+                  name: {{ include "ai-bridge.fullname" . }}-secret
                   key: session-secret
             {{- if .Values.cryptoSecret }}
             - name: CRYPTO_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "new-api.fullname" . }}-secret
+                  name: {{ include "ai-bridge.fullname" . }}-secret
                   key: crypto-secret
             {{- end }}
             # Extra environment variables
@@ -77,6 +77,17 @@ spec:
           {{- with .Values.extraEnvFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # Startup probe — prevents K8s routing traffic before app is ready
+          {{- if .Values.startupProbe.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.startupProbe.httpGet.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
           {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}

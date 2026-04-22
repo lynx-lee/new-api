@@ -159,12 +159,12 @@ const FooterBar = () => {
                 </p>
                 <div className='flex flex-col gap-4'>
                   <a
-                    href='https://github.com/Calcium-Ion/new-api-horizon'
+                    href='https://github.com/QuantumNous/ai-bridge'
                     target='_blank'
                     rel='noopener noreferrer'
                     className='!text-semi-color-text-1'
                   >
-                    new-api-horizon
+                    ai-bridge
                   </a>
                   <a
                     href='https://github.com/coaidev/coai'
@@ -200,7 +200,7 @@ const FooterBar = () => {
               {t('设计与开发由')}{' '}
             </span>
             <a
-              href='https://github.com/QuantumNous/new-api'
+              href='https://github.com/QuantumNous/ai-bridge'
               target='_blank'
               rel='noopener noreferrer'
               className='!text-semi-color-primary font-medium'
@@ -232,7 +232,7 @@ const FooterBar = () => {
                 {t('设计与开发由')}{' '}
               </span>
               <a
-                href='https://github.com/QuantumNous/new-api'
+                href='https://github.com/QuantumNous/ai-bridge'
                 target='_blank'
                 rel='noopener noreferrer'
                 className='!text-semi-color-primary font-medium'

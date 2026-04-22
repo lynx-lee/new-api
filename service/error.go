@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/logger"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/dto"
+	"github.com/QuantumNous/ai-bridge/logger"
+	"github.com/QuantumNous/ai-bridge/types"
 )
 
 func MidjourneyErrorWrapper(code int, desc string) *dto.MidjourneyResponse {
@@ -43,7 +43,7 @@ func MidjourneyErrorWithStatusCodeWrapper(code int, desc string, statusCode int)
 //	}
 //	openAIError := dto.OpenAIError{
 //		Message: text,
-//		Type:    "new_api_error",
+//		Type:    "ai_bridge_error",
 //		Code:    code,
 //	}
 //	return &dto.OpenAIErrorWithStatusCode{
@@ -69,7 +69,7 @@ func ClaudeErrorWrapper(err error, code string, statusCode int) *dto.ClaudeError
 	}
 	claudeError := types.ClaudeError{
 		Message: text,
-		Type:    "new_api_error",
+		Type:    "ai_bridge_error",
 	}
 	return &dto.ClaudeErrorWithStatusCode{
 		Error:      claudeError,
@@ -83,7 +83,7 @@ func ClaudeErrorWrapperLocal(err error, code string, statusCode int) *dto.Claude
 	return claudeErr
 }
 
-func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFail bool) (newApiErr *types.NewAPIError) {
+func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFail bool) (newApiErr *types.AIBridgeError) {
 	newApiErr = types.InitOpenAIError(types.ErrorCodeBadResponseStatusCode, resp.StatusCode)
 
 	responseBody, err := io.ReadAll(resp.Body)
@@ -128,7 +128,7 @@ func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFai
 	return
 }
 
-func ResetStatusCode(newApiErr *types.NewAPIError, statusCodeMappingStr string) {
+func ResetStatusCode(newApiErr *types.AIBridgeError, statusCodeMappingStr string) {
 	if newApiErr == nil {
 		return
 	}
@@ -207,8 +207,8 @@ func TaskErrorWrapper(err error, code string, statusCode int) *dto.TaskError {
 	return taskError
 }
 
-// TaskErrorFromAPIError 将 PreConsumeBilling 返回的 NewAPIError 转换为 TaskError。
-func TaskErrorFromAPIError(apiErr *types.NewAPIError) *dto.TaskError {
+// TaskErrorFromAPIError 将 PreConsumeBilling 返回的 AIBridgeError 转换为 TaskError。
+func TaskErrorFromAPIError(apiErr *types.AIBridgeError) *dto.TaskError {
 	if apiErr == nil {
 		return nil
 	}

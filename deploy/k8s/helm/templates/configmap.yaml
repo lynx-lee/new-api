@@ -1,19 +1,27 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "new-api.fullname" . }}-config
+  name: {{ include "ai-bridge.fullname" . }}-config
   labels:
-    {{- include "new-api.labels" . | nindent 4 }}
+    {{- include "ai-bridge.labels" . | nindent 4 }}
 data:
-  # Database DSN
-  SQL_DSN: {{ include "new-api.database.dsn" . }}
-  # Redis connection string
-  REDIS_CONN_STRING: {{ include "new-api.redis.connectionString" . }}
+  # Database DSN (auto-generated based on database.type and redis.architecture)
+  SQL_DSN: {{ include "ai-bridge.database.dsn" . }}
+  # Redis connection string (supports standalone / cluster / external)
+  REDIS_CONN_STRING: {{ include "ai-bridge.redis.connectionString" . }}
   # Redis pool size
   REDIS_POOL_SIZE: "{{ .Values.redis.poolSize }}"
+  {{- if eq .Values.redis.architecture "cluster" }}
+  REDIS_CLUSTER_ENABLED: "true"
+  {{- end }}
+  {{- if .Values.database.external.enabled }}
+  SQL_MAX_OPEN_CONNS: "{{ .Values.database.external.maxOpenConns }}"
+  SQL_MAX_IDLE_CONNS: "{{ .Values.database.external.maxIdleConns }}"
+  SQL_CONN_MAX_LIFETIME: "{{ .Values.database.external.connMaxLifetime }}"
+  {{- end }}
   # Node type (master runs background tasks)
   NODE_TYPE: "{{ .Values.nodeType }}"
-  NODE_NAME: "{{ .Values.fullNameOverride | default (include \"new-api.name\" .) }}-{{ randAlphaNum 6 }}"
+  NODE_NAME: "{{ .Values.fullNameOverride | default (include "ai-bridge.name" .) }}-{{ randAlphaNum 6 }}"
   # Sync frequency for channel cache sync (seconds)
   SYNC_FREQUENCY: "{{ .Values.syncFrequency }}"
   # Timezone

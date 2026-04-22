@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	common2 "github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/types"
+	common2 "github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/types"
 
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/setting/model_setting"
+	"github.com/QuantumNous/ai-bridge/dto"
+	"github.com/QuantumNous/ai-bridge/setting/model_setting"
 	"github.com/samber/lo"
 )
 

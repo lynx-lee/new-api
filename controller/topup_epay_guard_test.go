@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/ai-bridge/model"
 )
 
 func TestIsNonEpayPaymentMethodForEpayCallback(t *testing.T) {

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
-	"github.com/QuantumNous/new-api/model"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/types"
+	"github.com/QuantumNous/ai-bridge/common"
+	"github.com/QuantumNous/ai-bridge/dto"
+	"github.com/QuantumNous/ai-bridge/model"
+	"github.com/QuantumNous/ai-bridge/setting/operation_setting"
+	"github.com/QuantumNous/ai-bridge/types"
 )
 
 func formatNotifyType(channelId int, status int) string {
@@ -42,7 +42,7 @@ func EnableChannel(channelId int, usingKey string, channelName string) {
 	}
 }
 
-func ShouldDisableChannel(err *types.NewAPIError) bool {
+func ShouldDisableChannel(err *types.AIBridgeError) bool {
 	if !common.AutomaticDisableChannelEnabled {
 		return false
 	}
@@ -64,7 +64,7 @@ func ShouldDisableChannel(err *types.NewAPIError) bool {
 	return search
 }
 
-func ShouldEnableChannel(newAPIError *types.NewAPIError, status int) bool {
+func ShouldEnableChannel(newAPIError *types.AIBridgeError, status int) bool {
 	if !common.AutomaticEnableChannelEnabled {
 		return false
 	}
