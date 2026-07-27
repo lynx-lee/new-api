@@ -199,15 +199,20 @@ func ValidateBasicTaskRequest(c *gin.Context, info *RelayInfo, action string) *d
 	var err error
 	contentType := c.GetHeader("Content-Type")
 	var req TaskSubmitReq
+	isMultipart := false
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		req, err = validateMultipartTaskRequest(c, info, action)
 		if err != nil {
 			return createTaskError(err, "invalid_multipart_form", http.StatusBadRequest, true)
 		}
+		isMultipart = true
 	}
-	// 为了metadata字段的兼容性，统一UnmarshalBodyReusable
-	if err := common.UnmarshalBodyReusable(c, &req); err != nil {
-		return createTaskError(err, "invalid_request", http.StatusBadRequest, true)
+	// 非 multipart 时统一 UnmarshalBodyReusable；
+	// multipart 时 body 已被读取且非 JSON 格式，跳过此步骤。
+	if !isMultipart {
+		if err := common.UnmarshalBodyReusable(c, &req); err != nil {
+			return createTaskError(err, "invalid_request", http.StatusBadRequest, true)
+		}
 	}
 
 	if taskErr := validatePrompt(req.Prompt); taskErr != nil {

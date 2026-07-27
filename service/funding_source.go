@@ -28,7 +28,8 @@ type FundingSource interface {
 
 type WalletFunding struct {
 	userId   int
-	consumed int // 实际预扣的用户额度
+	consumed int  // 实际预扣的用户额度
+	refunded bool // 防止重复退款
 }
 
 func (w *WalletFunding) Source() string { return BillingSourceWallet }
@@ -55,9 +56,10 @@ func (w *WalletFunding) Settle(delta int) error {
 }
 
 func (w *WalletFunding) Refund() error {
-	if w.consumed <= 0 {
+	if w.refunded || w.consumed <= 0 {
 		return nil
 	}
+	w.refunded = true
 	// IncreaseUserQuota 是 quota += N 的非幂等操作，不能重试，否则会多退额度。
 	// 订阅的 RefundSubscriptionPreConsume 有 requestId 幂等保护所以可以重试。
 	return model.IncreaseUserQuota(w.userId, w.consumed, false)
