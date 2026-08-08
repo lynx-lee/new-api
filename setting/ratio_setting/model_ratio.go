@@ -317,6 +317,12 @@ var defaultModelPrice = map[string]float64{
 	"minimax-m3":         0.0021 * RMB,
 	"yt-vita":            0.0012 * RMB,
 	"hy-vision-2.0-instruct": 0.0075 * RMB,
+	// Ali Bailian Token Plan — text generation models (RMB per 1K tokens)
+	"qwen3.8-max":           0.02 * RMB,
+	"qwen3.7-plus":          0.008 * RMB,
+	"qwen3.7-max":           0.014 * RMB,
+	"qwen3.6-flash":         0.0014 * RMB,
+	"deepseek-v4-flash-0731": 0.001 * RMB,
 }
 
 var defaultAudioRatio = map[string]float64{
@@ -355,6 +361,12 @@ var defaultCompletionRatio = map[string]float64{
 	"minimax-m3":            4,
 	"yt-vita":               2.917,
 	"hy-vision-2.0-instruct": 2.333,
+	// Ali Bailian Token Plan — output/input ratio
+	"qwen3.8-max":           4,
+	"qwen3.7-plus":          5,
+	"qwen3.7-max":           4,
+	"qwen3.6-flash":         4,
+	"deepseek-v4-flash-0731": 2,
 }
 
 // InitRatioSettings initializes all model related settings maps

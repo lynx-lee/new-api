@@ -78,6 +78,12 @@ var defaultCacheRatio = map[string]float64{
 	"deepseek-v4-flash": 0.02,
 	"deepseek-v4-pro":   0.0083,
 	"minimax-m3":       0.2,
+	// Ali Bailian Token Plan — cache/input ratio
+	"qwen3.8-max":           0.25,
+	"qwen3.7-plus":          0.25,
+	"qwen3.7-max":           0.25,
+	"qwen3.6-flash":         0.25,
+	"deepseek-v4-flash-0731": 0.02,
 }
 
 var defaultCreateCacheRatio = map[string]float64{
