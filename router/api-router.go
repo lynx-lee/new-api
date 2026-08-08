@@ -208,6 +208,14 @@ func SetApiRouter(router *gin.Engine) {
 			ratioSyncRoute.GET("/channels", controller.GetSyncableChannels)
 			ratioSyncRoute.POST("/fetch", controller.FetchUpstreamRatios)
 		}
+		pricingSyncRoute := apiRouter.Group("/pricing_sync")
+		pricingSyncRoute.Use(middleware.RootAuth())
+		{
+			pricingSyncRoute.POST("/sync", controller.SyncNow)
+			pricingSyncRoute.GET("/diff", controller.GetPricingDiffs)
+			pricingSyncRoute.POST("/apply", controller.ApplyPricingDiff)
+			pricingSyncRoute.POST("/reject", controller.RejectPricingDiff)
+		}
 		channelRoute := apiRouter.Group("/channel")
 		channelRoute.Use(middleware.AdminAuth())
 		{

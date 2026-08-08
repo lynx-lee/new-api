@@ -317,6 +317,11 @@ func InitResources() error {
 	// 初始化模型
 	model.GetPricing()
 
+	// Load provider pricing cache for cost display
+	if err := service.LoadProviderPriceCache(); err != nil {
+		common.SysLog("failed to load provider price cache: " + err.Error())
+	}
+
 	// Initialize SQL Database
 	err = model.InitLogDB()
 	if err != nil {
@@ -350,5 +355,7 @@ func InitResources() error {
 		// Don't return error, custom OAuth is not critical
 	}
 
+		// Start provider pricing sync scheduler
+		go service.StartScheduler(context.Background(), 24*time.Hour)
 	return nil
 }

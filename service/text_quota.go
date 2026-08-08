@@ -319,6 +319,18 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		extraContent = append(extraContent, fmt.Sprintf("Image Generation Call 花费 %s", decimal.NewFromFloat(summary.ImageGenerationCallPrice).Mul(decimal.NewFromFloat(summary.GroupRatio)).Mul(decimal.NewFromFloat(common.QuotaPerUnit)).String()))
 	}
 
+	// Compute original-currency cost from provider pricing
+	if pp, ok := LookupProviderPrice(summary.ModelName); ok && pp.Currency != "" && summary.TotalTokens > 0 {
+		unitDivisor := 1_000_000.0
+		if pp.UnitType == "per_1K_tokens" {
+			unitDivisor = 1000.0
+		}
+		cost := (float64(summary.PromptTokens)*pp.RawInputPrice + float64(summary.CompletionTokens)*pp.RawOutputPrice) / unitDivisor
+		if cost > 0 {
+			extraContent = append(extraContent, fmt.Sprintf("预估成本 %.6f %s", cost, pp.Currency))
+		}
+	}
+
 	if summary.TotalTokens == 0 {
 		extraContent = append(extraContent, "上游没有返回计费信息，无法扣费（可能是上游超时）")
 		logger.LogError(ctx, fmt.Sprintf("total tokens is 0, cannot consume quota, userId %d, channelId %d, tokenId %d, model %s， pre-consumed quota %d", relayInfo.UserId, relayInfo.ChannelId, relayInfo.TokenId, summary.ModelName, relayInfo.FinalPreConsumedQuota))
