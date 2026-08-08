@@ -2,6 +2,7 @@ package hytokenplan
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/QuantumNous/ai-bridge/common"
 	"github.com/QuantumNous/ai-bridge/dto"
 	"github.com/QuantumNous/ai-bridge/relay/channel"
+	"github.com/QuantumNous/ai-bridge/relay/channel/claude"
 	"github.com/QuantumNous/ai-bridge/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
 	"github.com/QuantumNous/ai-bridge/types"
@@ -20,7 +22,12 @@ type Adaptor struct{}
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {}
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	// HY Token Plan uses /plan/v3 prefix (not /v1), strip the standard /v1 path prefix
+	// HY Token Plan supports both OpenAI (/plan/v3) and Anthropic (/plan/anthropic) protocols.
+	if info.RelayFormat == types.RelayFormatClaude {
+		// Anthropic endpoint: https://api.lkeap.cloud.tencent.com/plan/anthropic/v1/messages
+		return fmt.Sprintf("%s/anthropic/v1/messages", strings.TrimSuffix(info.ChannelBaseUrl, "/v3")), nil
+	}
+	// OpenAI: strip the standard /v1 path prefix, base URL already includes /plan/v3
 	path := strings.TrimPrefix(info.RequestURLPath, "/v1")
 	return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, path, info.ChannelType), nil
 }
@@ -40,11 +47,20 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	return request, nil
 }
 
+func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
+	// HY Token Plan supports Anthropic protocol natively, pass through as-is.
+	return request, nil
+}
+
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIBridgeError) {
+	if info.RelayFormat == types.RelayFormatClaude {
+		adaptor := claude.Adaptor{}
+		return adaptor.DoResponse(c, resp, info)
+	}
 	adaptor := openai.Adaptor{}
 	return adaptor.DoResponse(c, resp, info)
 }
@@ -71,10 +87,6 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 }
 
 func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.OpenAIResponsesRequest) (any, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
 	return nil, errors.New("not implemented")
 }
 
