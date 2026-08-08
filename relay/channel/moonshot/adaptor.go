@@ -28,6 +28,21 @@ func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dt
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ClaudeRequest) (any, error) {
+	// Strip cc-switch context-length suffixes like [1M], [1m] from model name
+	// so the upstream receives a clean model name (e.g. kimi-k3 instead of kimi-k3[1M]).
+	req.Model = common.StripCCSwitchContextSuffix(req.Model)
+
+	// Kimi API does not support temperature, top_p, or top_k; the model has its own
+	// internal settings for these. Sending them causes errors like
+	// "invalid top_p: only 0.95 is allowed for this model".
+	req.Temperature = nil
+	req.TopP = nil
+	req.TopK = nil
+
+	// Kimi does not support extended thinking. Strip the thinking field to avoid
+	// upstream rejection when Claude Code sends thinking blocks via cc-switch.
+	req.Thinking = nil
+
 	adaptor := claude.Adaptor{}
 	return adaptor.ConvertClaudeRequest(c, info, req)
 }

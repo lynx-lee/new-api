@@ -27,6 +27,9 @@ func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dt
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ClaudeRequest) (any, error) {
+	// Strip cc-switch context-length suffixes like [1M], [1m] from model name
+	// so the upstream receives a clean model name (e.g. deepseek-v4-pro instead of deepseek-v4-pro[1M]).
+	req.Model = common.StripCCSwitchContextSuffix(req.Model)
 	adaptor := claude.Adaptor{}
 	return adaptor.ConvertClaudeRequest(c, info, req)
 }
