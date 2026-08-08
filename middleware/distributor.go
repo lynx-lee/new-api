@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -36,6 +37,11 @@ func Distribute() func(c *gin.Context) {
 			abortWithOpenAiMessage(c, http.StatusBadRequest, i18n.T(c, i18n.MsgDistributorInvalidRequest, map[string]any{"Error": err.Error()}))
 			return
 		}
+
+		// Strip cc-switch context-length suffixes like [1m], [128k] from model name
+		// so channel matching works against clean model names (e.g. kimi-k3 instead of kimi-k3[1m]).
+		modelRequest.Model = stripContextSuffix(modelRequest.Model)
+
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
@@ -432,4 +438,16 @@ func extractModelNameFromGeminiPath(path string) string {
 
 	// 返回模型名部分
 	return path[startIndex : startIndex+colonIndex]
+}
+
+// stripContextSuffix removes cc-switch context-length suffixes like [1m], [128k]
+// from model names. For example, kimi-k3[1m] becomes kimi-k3.
+//
+// The suffix pattern is [digits][km] at the end of the string, where:
+//   - k = thousand tokens (e.g. [32k], [128k])
+//   - m = million tokens (e.g. [1m], [2m])
+var contextSuffixRe = regexp.MustCompile(`\[\d+[km]\]$`)
+
+func stripContextSuffix(model string) string {
+	return contextSuffixRe.ReplaceAllString(model, "")
 }
