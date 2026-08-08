@@ -308,6 +308,15 @@ var defaultModelPrice = map[string]float64{
 	"veo-3.0-fast-generate-001":      0.15,
 	"veo-3.1-generate-preview":       0.4,
 	"veo-3.1-fast-generate-preview":  0.15,
+	// TokenHub (Tencent Cloud) — RMB per 1K tokens × RMB
+	"hy3":                0.001 * RMB,
+	"glm-5.2":            0.008 * RMB,
+	"kimi-k3":            0.02 * RMB,
+	"deepseek-v4-flash":  0.001 * RMB,
+	"deepseek-v4-pro":    0.003 * RMB,
+	"minimax-m3":         0.0021 * RMB,
+	"yt-vita":            0.0012 * RMB,
+	"hy-vision-2.0-instruct": 0.0075 * RMB,
 }
 
 var defaultAudioRatio = map[string]float64{
@@ -337,6 +346,15 @@ var defaultCompletionRatio = map[string]float64{
 	"gpt-4o-gizmo-*": 3,
 	"gpt-4-all":      2,
 	"gpt-image-1":    8,
+	// TokenHub (Tencent Cloud) — output/input ratio
+	"hy3":                   4,
+	"glm-5.2":               3.5,
+	"kimi-k3":               5,
+	"deepseek-v4-flash":     2,
+	"deepseek-v4-pro":       2,
+	"minimax-m3":            4,
+	"yt-vita":               2.917,
+	"hy-vision-2.0-instruct": 2.333,
 }
 
 // InitRatioSettings initializes all model related settings maps

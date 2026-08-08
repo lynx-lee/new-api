@@ -114,6 +114,10 @@ func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFai
 		// General format error (OpenAI, Anthropic, Gemini, etc.)
 		oaiError := errResponse.TryToOpenAIError()
 		if oaiError != nil {
+			// Prefer Chinese error message when available (e.g. Tencent TokenHub)
+			if oaiError.MessageZh != "" {
+				oaiError.Message = oaiError.MessageZh
+			}
 			newApiErr = types.WithOpenAIError(*oaiError, resp.StatusCode)
 			if showBodyWhenFail {
 				newApiErr.Err = buildErrWithBody(newApiErr.Error())

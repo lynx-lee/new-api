@@ -11,11 +11,12 @@ import (
 )
 
 type OpenAIError struct {
-	Message  string          `json:"message"`
-	Type     string          `json:"type"`
-	Param    string          `json:"param"`
-	Code     any             `json:"code"`
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Message   string          `json:"message"`
+	MessageZh string          `json:"message_zh,omitempty"`
+	Type      string          `json:"type"`
+	Param     string          `json:"param"`
+	Code      any             `json:"code"`
+	Metadata  json.RawMessage `json:"metadata,omitempty"`
 }
 
 type ClaudeError struct {

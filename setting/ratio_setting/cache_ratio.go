@@ -71,6 +71,13 @@ var defaultCacheRatio = map[string]float64{
 	"claude-opus-4-7-high":                0.1,
 	"claude-opus-4-7-medium":              0.1,
 	"claude-opus-4-7-low":                 0.1,
+	// TokenHub (Tencent Cloud) — cache/input ratio
+	"hy3":              0.25,
+	"glm-5.2":          0.25,
+	"kimi-k3":          0.1,
+	"deepseek-v4-flash": 0.02,
+	"deepseek-v4-pro":   0.0083,
+	"minimax-m3":       0.2,
 }
 
 var defaultCreateCacheRatio = map[string]float64{
