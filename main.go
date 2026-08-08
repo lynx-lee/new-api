@@ -22,13 +22,13 @@ import (
 	"github.com/QuantumNous/ai-bridge/middleware"
 	"github.com/QuantumNous/ai-bridge/model"
 	"github.com/QuantumNous/ai-bridge/oauth"
-	"github.com/QuantumNous/ai-bridge/relay"
-	"github.com/QuantumNous/ai-bridge/router"
-	"github.com/QuantumNous/ai-bridge/service"
 	"github.com/QuantumNous/ai-bridge/pkg/alerting"
 	"github.com/QuantumNous/ai-bridge/pkg/canary"
 	"github.com/QuantumNous/ai-bridge/pkg/circuitbreaker"
 	"github.com/QuantumNous/ai-bridge/pkg/tracing"
+	"github.com/QuantumNous/ai-bridge/relay"
+	"github.com/QuantumNous/ai-bridge/router"
+	"github.com/QuantumNous/ai-bridge/service"
 	_ "github.com/QuantumNous/ai-bridge/setting/performance_setting"
 	"github.com/QuantumNous/ai-bridge/setting/ratio_setting"
 
@@ -117,27 +117,62 @@ func main() {
 			model.InitChannelCache()
 		}()
 
-		go model.SyncChannelCache(common.SyncFrequency)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					common.SysLog(fmt.Sprintf("SyncChannelCache panic: %v", r))
+				}
+			}()
+			model.SyncChannelCache(common.SyncFrequency)
+		}()
 
 		// 启动 Redis Pub/Sub 实时同步（K8s 多节点场景下消除缓存延迟）
 		model.InitChannelCacheSync()
 	}
 
 	// 热更新配置
-	go model.SyncOptions(common.SyncFrequency)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				common.SysLog(fmt.Sprintf("SyncOptions panic: %v", r))
+			}
+		}()
+		model.SyncOptions(common.SyncFrequency)
+	}()
 
 	// 数据看板
-	go model.UpdateQuotaData()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				common.SysLog(fmt.Sprintf("UpdateQuotaData panic: %v", r))
+			}
+		}()
+		model.UpdateQuotaData()
+	}()
 
 	if os.Getenv("CHANNEL_UPDATE_FREQUENCY") != "" {
 		frequency, err := strconv.Atoi(os.Getenv("CHANNEL_UPDATE_FREQUENCY"))
 		if err != nil {
 			common.FatalLog("failed to parse CHANNEL_UPDATE_FREQUENCY: " + err.Error())
 		}
-		go controller.AutomaticallyUpdateChannels(frequency)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					common.SysLog(fmt.Sprintf("AutomaticallyUpdateChannels panic: %v", r))
+				}
+			}()
+			controller.AutomaticallyUpdateChannels(frequency)
+		}()
 	}
 
-	go controller.AutomaticallyTestChannels()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				common.SysLog(fmt.Sprintf("AutomaticallyTestChannels panic: %v", r))
+			}
+		}()
+		controller.AutomaticallyTestChannels()
+	}()
 
 	// Codex credential auto-refresh check every 10 minutes, refresh when expires within 1 day
 	service.StartCodexCredentialAutoRefreshTask()
@@ -199,7 +234,7 @@ func main() {
 	//server.Use(gzip.Gzip(gzip.DefaultCompression))
 	server.Use(middleware.RequestId())
 	server.Use(middleware.PoweredBy())
-	server.Use(metrics.Middleware()) // Prometheus 指标采集中间件
+	server.Use(metrics.Middleware())           // Prometheus 指标采集中间件
 	server.Use(middleware.TracingMiddleware()) // OpenTelemetry 链路追踪
 	server.Use(middleware.I18n())
 	middleware.SetUpLogger(server)
@@ -355,7 +390,14 @@ func InitResources() error {
 		// Don't return error, custom OAuth is not critical
 	}
 
-		// Start provider pricing sync scheduler
-		go service.StartScheduler(context.Background(), 24*time.Hour)
+	// Start provider pricing sync scheduler
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				common.SysLog(fmt.Sprintf("StartScheduler panic: %v", r))
+			}
+		}()
+		service.StartScheduler(context.Background(), 24*time.Hour)
+	}()
 	return nil
 }

@@ -321,13 +321,36 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 
 	// Compute original-currency cost from provider pricing
 	if pp, ok := LookupProviderPrice(summary.ModelName); ok && pp.Currency != "" && summary.TotalTokens > 0 {
-		unitDivisor := 1_000_000.0
-		if pp.UnitType == "per_1K_tokens" {
-			unitDivisor = 1000.0
+		unitType := pp.UnitType
+		if unitType == "" {
+			unitType = "per_1M_tokens"
 		}
-		cost := (float64(summary.PromptTokens)*pp.RawInputPrice + float64(summary.CompletionTokens)*pp.RawOutputPrice) / unitDivisor
-		if cost > 0 {
-			extraContent = append(extraContent, fmt.Sprintf("预估成本 %.6f %s", cost, pp.Currency))
+		// Only compute per-token cost for token-based pricing
+		if unitType == "per_1M_tokens" || unitType == "per_1K_tokens" {
+			unitDivisor := 1_000_000.0
+			if unitType == "per_1K_tokens" {
+				unitDivisor = 1000.0
+			}
+			// Base prompt tokens (exclude cache-read tokens which have their own price)
+			basePromptTokens := summary.PromptTokens - summary.CacheTokens
+			if basePromptTokens < 0 {
+				basePromptTokens = 0
+			}
+			var cost float64
+			cost += float64(basePromptTokens) * pp.RawInputPrice
+			cost += float64(summary.CompletionTokens) * pp.RawOutputPrice
+			// Cache-read tokens billed at cache price when available, otherwise input price
+			if summary.CacheTokens > 0 {
+				if pp.RawCacheReadPrice != nil && *pp.RawCacheReadPrice > 0 {
+					cost += float64(summary.CacheTokens) * *pp.RawCacheReadPrice
+				} else {
+					cost += float64(summary.CacheTokens) * pp.RawInputPrice
+				}
+			}
+			cost /= unitDivisor
+			if cost > 0 {
+				extraContent = append(extraContent, fmt.Sprintf("预估成本 %.6f %s", cost, pp.Currency))
+			}
 		}
 	}
 
