@@ -41,6 +41,7 @@ import (
 	taskvertex "github.com/QuantumNous/ai-bridge/relay/channel/task/vertex"
 	taskVidu "github.com/QuantumNous/ai-bridge/relay/channel/task/vidu"
 	"github.com/QuantumNous/ai-bridge/relay/channel/tencent"
+	"github.com/QuantumNous/ai-bridge/relay/channel/hytokenplan"
 	"github.com/QuantumNous/ai-bridge/relay/channel/tokenhub"
 	"github.com/QuantumNous/ai-bridge/relay/channel/vertex"
 	"github.com/QuantumNous/ai-bridge/relay/channel/volcengine"
@@ -123,6 +124,8 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &codex.Adaptor{}
 	case constant.APITypeTokenHub:
 		return &tokenhub.Adaptor{}
+	case constant.APITypeHYTokenPlan:
+		return &hytokenplan.Adaptor{}
 	}
 	return nil
 }

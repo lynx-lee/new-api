@@ -55,8 +55,9 @@ const (
 	ChannelTypeSora           = 55
 	ChannelTypeReplicate      = 56
 	ChannelTypeCodex          = 57
-	ChannelTypeTokenHub       = 58
-	ChannelTypeDummy          // this one is only for count, do not add any channel after this
+	ChannelTypeTokenHub      = 58
+	ChannelTypeHYTokenPlan   = 59
+	ChannelTypeDummy         // this one is only for count, do not add any channel after this
 
 )
 
@@ -120,6 +121,7 @@ var ChannelBaseURLs = []string{
 	"https://api.replicate.com",                 //56
 	"https://chatgpt.com",                       //57
 	"https://tokenhub.tencentmaas.com",          //58
+	"https://api.lkeap.cloud.tencent.com/plan/v3", //59
 }
 
 var ChannelTypeNames = map[int]string{
@@ -178,6 +180,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeReplicate:      "Replicate",
 	ChannelTypeCodex:          "Codex",
 	ChannelTypeTokenHub:       "TokenHub",
+	ChannelTypeHYTokenPlan:    "HYTokenPlan",
 }
 
 func GetChannelTypeName(channelType int) string {
