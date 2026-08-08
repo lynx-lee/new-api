@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/QuantumNous/ai-bridge/common"
 	"github.com/QuantumNous/ai-bridge/dto"
@@ -19,7 +20,9 @@ type Adaptor struct{}
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {}
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, info.RequestURLPath, info.ChannelType), nil
+	// HY Token Plan uses /plan/v3 prefix (not /v1), strip the standard /v1 path prefix
+	path := strings.TrimPrefix(info.RequestURLPath, "/v1")
+	return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, path, info.ChannelType), nil
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) error {
