@@ -2,12 +2,15 @@ package tokenhub
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/QuantumNous/ai-bridge/common"
 	"github.com/QuantumNous/ai-bridge/dto"
 	"github.com/QuantumNous/ai-bridge/relay/channel"
+	"github.com/QuantumNous/ai-bridge/relay/channel/claude"
 	"github.com/QuantumNous/ai-bridge/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/ai-bridge/relay/common"
 	"github.com/QuantumNous/ai-bridge/types"
@@ -19,6 +22,11 @@ type Adaptor struct{}
 func (a *Adaptor) Init(info *relaycommon.RelayInfo) {}
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
+	// TokenHub supports both OpenAI (/v1) and Anthropic protocols on the same gateway.
+	// Anthropic endpoint: https://tokenhub.tencentmaas.com/v1/messages
+	if info.RelayFormat == types.RelayFormatClaude {
+		return fmt.Sprintf("%s/v1/messages", strings.TrimSuffix(info.ChannelBaseUrl, "/v1")), nil
+	}
 	return relaycommon.GetFullRequestURL(info.ChannelBaseUrl, info.RequestURLPath, info.ChannelType), nil
 }
 
@@ -42,6 +50,10 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.AIBridgeError) {
+	if info.RelayFormat == types.RelayFormatClaude {
+		adaptor := claude.Adaptor{}
+		return adaptor.DoResponse(c, resp, info)
+	}
 	adaptor := openai.Adaptor{}
 	return adaptor.DoResponse(c, resp, info)
 }
@@ -72,7 +84,12 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
-	return nil, errors.New("not implemented")
+	if request == nil {
+		return nil, errors.New("request is nil")
+	}
+	// TokenHub supports Anthropic protocol natively; strip cc-switch suffixes then pass through.
+	request.Model = common.StripCCSwitchContextSuffix(request.Model)
+	return request, nil
 }
 
 func (a *Adaptor) ConvertGeminiRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeminiChatRequest) (any, error) {
