@@ -1,6 +1,7 @@
 package ali
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -139,17 +140,13 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
-	// docs: https://bailian.console.aliyun.com/?tab=api#/api/?type=model&url=2712216
-	// fix: InternalError.Algo.InvalidParameter: The value of the enable_thinking parameter is restricted to True.
-	//if strings.Contains(request.Model, "thinking") {
-	//	request.EnableThinking = true
-	//	request.Stream = true
-	//	info.IsStream = true
-	//}
-	//// fix: ali parameter.enable_thinking must be set to false for non-streaming calls
-	//if !info.IsStream {
-	//	request.EnableThinking = false
-	//}
+	// Qwen3.x models default to thinking mode. For non-streaming calls,
+	// thinking must be disabled to prevent infinite reasoning loops.
+	// Client can opt-in to streaming+thinking by setting stream=true + enable_thinking=true.
+	// See: https://help.aliyun.com/zh/model-studio/use-the-thinking-mode
+	if !info.IsStream {
+		request.EnableThinking = json.RawMessage("false")
+	}
 
 	switch info.RelayMode {
 	default:
