@@ -89,6 +89,10 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}
 
 	defer func() {
+		// Recover from any panic during error response writing to prevent
+		// gin's recovery middleware from appending a second JSON body
+		// (e.g. when billing cleanup in the deferred below panics).
+		defer recover()
 		if newAPIError != nil {
 			logger.LogError(c, fmt.Sprintf("relay error: %s", newAPIError.Error()))
 			newAPIError.SetMessage(common.MessageWithRequestId(newAPIError.Error(), requestId))

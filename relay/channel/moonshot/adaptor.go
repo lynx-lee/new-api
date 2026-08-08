@@ -79,7 +79,40 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 }
 
 func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+	// Kimi API does not support temperature and top_p; the model has its own
+	// internal settings for these. Sending them causes errors like
+	// "invalid top_p: only 0.95 is allowed for this model".
+	request.Temperature = nil
+	request.TopP = nil
+
+	// max_tokens is deprecated in favor of max_completion_tokens.
+	// If the client only sent max_tokens, map it.
+	if request.MaxTokens != nil && request.MaxCompletionTokens == nil {
+		request.MaxCompletionTokens = request.MaxTokens
+	}
+	request.MaxTokens = nil
+
+	// Kimi rejects empty assistant messages ("the message at position N with
+	// role 'assistant' must not be empty"). Filter them out before forwarding.
+	filtered := make([]dto.Message, 0, len(request.Messages))
+	for _, msg := range request.Messages {
+		if msg.Role == "assistant" && isEmptyContent(msg.Content) {
+			continue
+		}
+		filtered = append(filtered, msg)
+	}
+	request.Messages = filtered
+
 	return request, nil
+}
+
+// isEmptyContent returns true if the content is an empty string or nil.
+func isEmptyContent(v any) bool {
+	if v == nil {
+		return true
+	}
+	s, ok := v.(string)
+	return ok && s == ""
 }
 
 func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.OpenAIResponsesRequest) (any, error) {
