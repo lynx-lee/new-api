@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/QuantumNous/ai-bridge/common"
 	"github.com/QuantumNous/ai-bridge/dto"
 	"github.com/QuantumNous/ai-bridge/relay/channel"
 	"github.com/QuantumNous/ai-bridge/relay/channel/claude"
@@ -71,6 +72,8 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+	// Strip cc-switch context-length suffixes like [1m] from model name.
+	request.Model = common.StripCCSwitchContextSuffix(request.Model)
 	return request, nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	channelconstant "github.com/QuantumNous/ai-bridge/constant"
+	"github.com/QuantumNous/ai-bridge/common"
 	"github.com/QuantumNous/ai-bridge/dto"
 	"github.com/QuantumNous/ai-bridge/relay/channel"
 	"github.com/QuantumNous/ai-bridge/relay/channel/claude"
@@ -79,6 +80,10 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 }
 
 func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+	// Strip cc-switch context-length suffixes like [1m] from model name
+	// so the upstream receives a clean model name (e.g. kimi-k3 instead of kimi-k3[1m]).
+	request.Model = common.StripCCSwitchContextSuffix(request.Model)
+
 	// Kimi API does not support temperature and top_p; the model has its own
 	// internal settings for these. Sending them causes errors like
 	// "invalid top_p: only 0.95 is allowed for this model".
