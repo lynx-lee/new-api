@@ -230,11 +230,14 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 			return nil, err
 		}
 
-		budgetTokens := reasoning.MaxTokens
+		budgetTokens := 0
+		if reasoning.MaxTokens != nil {
+			budgetTokens = *reasoning.MaxTokens
+		}
 		if budgetTokens > 0 {
 			claudeRequest.Thinking = &dto.Thinking{
 				Type:         "enabled",
-				BudgetTokens: &budgetTokens,
+				BudgetTokens: common.GetPointer(budgetTokens),
 			}
 		}
 	}
