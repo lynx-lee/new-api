@@ -83,6 +83,8 @@ export default defineConfig({
             'react-i18next',
             'i18next-browser-languagedetector',
           ],
+          diagrams: ['mermaid', 'cytoscape', 'cytoscape-cose-bilkent'],
+          markdown: ['dompurify', 'react-markdown'],
         },
       },
     },
