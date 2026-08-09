@@ -91,6 +91,13 @@ func RelayErrorHandler(ctx context.Context, resp *http.Response, showBodyWhenFai
 		return
 	}
 	CloseResponseBodyGracefully(resp)
+
+	// 保存上游原始响应体和请求 URL，用于错误日志排查
+	newApiErr.RawResponseBody = string(responseBody)
+	if resp.Request != nil && resp.Request.URL != nil {
+		newApiErr.UpstreamURL = resp.Request.URL.String()
+	}
+
 	var errResponse dto.GeneralErrorResponse
 	buildErrWithBody := func(message string) error {
 		if message == "" {

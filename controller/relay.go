@@ -465,6 +465,18 @@ func processChannelError(c *gin.Context, channelError types.ChannelError, err *t
 		other["channel_id"] = channelId
 		other["channel_name"] = c.GetString("channel_name")
 		other["channel_type"] = c.GetInt("channel_type")
+		if err.UpstreamURL != "" {
+			other["upstream_url"] = err.UpstreamURL
+		}
+		if err.RawResponseBody != "" {
+			// 脱敏后截断，避免响应体过大撑爆日志
+			body := common.MaskSensitiveInfo(err.RawResponseBody)
+			const maxBodyLen = 2048
+			if len(body) > maxBodyLen {
+				body = body[:maxBodyLen] + "...(truncated)"
+			}
+			other["response_body"] = body
+		}
 		adminInfo := make(map[string]interface{})
 		adminInfo["use_channel"] = c.GetStringSlice("use_channel")
 		isMultiKey := common.GetContextKeyBool(c, constant.ContextKeyChannelIsMultiKey)

@@ -89,14 +89,16 @@ const (
 )
 
 type AIBridgeError struct {
-	Err            error
-	RelayError     any
-	skipRetry      bool
-	recordErrorLog *bool
-	errorType      ErrorType
-	errorCode      ErrorCode
-	StatusCode     int
-	Metadata       json.RawMessage
+	Err             error
+	RelayError      any
+	skipRetry       bool
+	recordErrorLog  *bool
+	errorType       ErrorType
+	errorCode       ErrorCode
+	StatusCode      int
+	Metadata        json.RawMessage
+	RawResponseBody string // 上游原始响应体（用于错误日志排查）
+	UpstreamURL     string // 实际请求的上游 URL
 }
 
 // Unwrap enables errors.Is / errors.As to work with AIBridgeError by exposing the underlying error.
