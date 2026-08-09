@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -87,7 +86,7 @@ func PublishChannelCacheChange(action string, channelID int) {
 		ChannelID: channelID,
 		NodeName:  common.NodeName,
 	}
-	data, err := json.Marshal(msg)
+	data, err := common.Marshal(msg)
 	if err != nil {
 		common.SysError(fmt.Sprintf("failed to marshal channel cache sync message: %v", err))
 		return
@@ -142,7 +141,7 @@ func subscribeChannelCacheSync(ctx context.Context) {
 // handleChannelCacheSyncMessage 处理收到的渠道缓存同步消息
 func handleChannelCacheSyncMessage(payload string) {
 	var msg ChannelCacheSyncMessage
-	if err := json.Unmarshal([]byte(payload), &msg); err != nil {
+	if err := common.Unmarshal([]byte(payload), &msg); err != nil {
 		common.SysError(fmt.Sprintf("failed to unmarshal channel cache sync message: %v, payload=%s", err, payload))
 		return
 	}

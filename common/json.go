@@ -43,3 +43,7 @@ func GetJsonType(data json.RawMessage) string {
 		return "number"
 	}
 }
+
+func Valid(data []byte) bool {
+	return json.Valid(data)
+}

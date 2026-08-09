@@ -1,7 +1,7 @@
 package ionet
 
 import (
-	"encoding/json"
+	"github.com/QuantumNous/ai-bridge/common"
 	"fmt"
 	"strings"
 	"time"
@@ -290,7 +290,7 @@ func (c *Client) ExecuteInContainer(deploymentID, containerID string, command []
 	}
 
 	var result map[string]interface{}
-	if err := json.Unmarshal(resp.Body, &result); err != nil {
+	if err := common.Unmarshal(resp.Body, &result); err != nil {
 		return "", fmt.Errorf("failed to parse execution result: %w", err)
 	}
 

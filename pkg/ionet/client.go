@@ -2,7 +2,7 @@ package ionet
 
 import (
 	"bytes"
-	"encoding/json"
+	"github.com/QuantumNous/ai-bridge/common"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -101,7 +101,7 @@ func (c *Client) makeRequest(method, endpoint string, body interface{}) (*HTTPRe
 	var err error
 
 	if body != nil {
-		reqBody, err = json.Marshal(body)
+		reqBody, err = common.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
@@ -132,7 +132,7 @@ func (c *Client) makeRequest(method, endpoint string, body interface{}) (*HTTPRe
 			var errorResp struct {
 				Detail string `json:"detail"`
 			}
-			if err := json.Unmarshal(resp.Body, &errorResp); err == nil && errorResp.Detail != "" {
+			if err := common.Unmarshal(resp.Body, &errorResp); err == nil && errorResp.Detail != "" {
 				apiErr = APIError{
 					Code:    resp.StatusCode,
 					Message: errorResp.Detail,
@@ -197,13 +197,13 @@ func buildQueryParams(params map[string]interface{}) string {
 			}
 		case []int:
 			if len(v) > 0 {
-				if encoded, err := json.Marshal(v); err == nil {
+				if encoded, err := common.Marshal(v); err == nil {
 					values.Add(key, string(encoded))
 				}
 			}
 		case []string:
 			if len(v) > 0 {
-				if encoded, err := json.Marshal(v); err == nil {
+				if encoded, err := common.Marshal(v); err == nil {
 					values.Add(key, string(encoded))
 				}
 			}
