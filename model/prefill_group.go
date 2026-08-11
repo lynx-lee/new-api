@@ -3,7 +3,10 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/QuantumNous/ai-bridge/common"
 
 	"gorm.io/gorm"
@@ -84,28 +87,47 @@ type PrefillGroup struct {
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// Insert 新建组
+// Insert 新建组，捕获唯一键冲突返回友好错误
 func (g *PrefillGroup) Insert() error {
 	now := common.GetTimestamp()
 	g.CreatedTime = now
 	g.UpdatedTime = now
-	return DB.Create(g).Error
+	err := DB.Create(g).Error
+	return wrapDuplicateKeyErr(err, "uk_prefill_name")
 }
 
-// IsPrefillGroupNameDuplicated 检查组名称是否重复（排除自身 ID）
+// IsPrefillGroupNameDuplicated 检查组名称是否重复（排除自身 ID，仅检查活跃记录）
 func IsPrefillGroupNameDuplicated(id int, name string) (bool, error) {
 	if name == "" {
 		return false, nil
 	}
 	var cnt int64
-	err := DB.Model(&PrefillGroup{}).Where("name = ? AND id <> ?", name, id).Count(&cnt).Error
+	err := DB.Model(&PrefillGroup{}).Where("name = ? AND id <> ? AND deleted_at IS NULL", name, id).Count(&cnt).Error
 	return cnt > 0, err
 }
 
-// Update 更新组
+// IsMySQLDuplicateKeyErr 判断 MySQL 错误是否为唯一键冲突（Error 1062）
+func IsMySQLDuplicateKeyErr(err error, keyName string) bool {
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == 1062 && strings.Contains(mysqlErr.Message, keyName)
+	}
+	return false
+}
+
+// wrapDuplicateKeyErr 将 MySQL 1062 错误包装为友好的业务错误
+func wrapDuplicateKeyErr(err error, keyName string) error {
+	if err != nil && IsMySQLDuplicateKeyErr(err, keyName) {
+		return errors.New("组名称已存在，请使用其他名称")
+	}
+	return err
+}
+
+// Update 更新组，捕获唯一键冲突返回友好错误
 func (g *PrefillGroup) Update() error {
 	g.UpdatedTime = common.GetTimestamp()
-	return DB.Save(g).Error
+	err := DB.Save(g).Error
+	return wrapDuplicateKeyErr(err, "uk_prefill_name")
 }
 
 // DeleteByID 根据 ID 删除组
