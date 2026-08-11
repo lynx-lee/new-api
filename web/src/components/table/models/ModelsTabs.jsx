@@ -17,8 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
-import { Tabs, TabPane, Tag, Button, Dropdown, Modal } from '@douyinfe/semi-ui';
+import React, { useState } from 'react';
+import { Tabs, TabPane, Tag, Button, Dropdown, Modal, Checkbox } from '@douyinfe/semi-ui';
 import { IconEdit, IconDelete } from '@douyinfe/semi-icons';
 import { getLobeHubIcon, showError, showSuccess } from '../../../helpers';
 import { API } from '../../../helpers';
@@ -28,6 +28,7 @@ const ModelsTabs = ({
   setActiveVendorKey,
   vendorCounts,
   vendors,
+  vendorsWithChannels,
   loadModels,
   activePage,
   pageSize,
@@ -38,6 +39,13 @@ const ModelsTabs = ({
   loadVendors,
   t,
 }) => {
+  // 筛选：只显示有渠道模型的供应商
+  const [onlyWithChannels, setOnlyWithChannels] = useState(false);
+
+  // 根据筛选条件过滤供应商列表
+  const filteredVendors = onlyWithChannels
+    ? vendors.filter((v) => vendorsWithChannels[v.id] === true)
+    : vendors;
   const handleTabChange = (key) => {
     setActiveVendorKey(key);
     setActivePage(1);
@@ -80,13 +88,21 @@ const ModelsTabs = ({
       onChange={handleTabChange}
       className='mb-2'
       tabBarExtraContent={
-        <Button
-          type='primary'
-          size='small'
-          onClick={() => setShowAddVendor(true)}
-        >
-          {t('新增供应商')}
-        </Button>
+        <div className='flex items-center gap-3'>
+          <Checkbox
+            checked={onlyWithChannels}
+            onChange={(e) => setOnlyWithChannels(e.target.checked)}
+          >
+            {t('仅显示有渠道的供应商')}
+          </Checkbox>
+          <Button
+            type='primary'
+            size='small'
+            onClick={() => setShowAddVendor(true)}
+          >
+            {t('新增供应商')}
+          </Button>
+        </div>
       }
     >
       <TabPane
@@ -104,7 +120,7 @@ const ModelsTabs = ({
         }
       />
 
-      {vendors.map((vendor) => {
+      {filteredVendors.map((vendor) => {
         const key = String(vendor.id);
         const count = vendorCounts[vendor.id] || 0;
         return (

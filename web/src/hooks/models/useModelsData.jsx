@@ -90,6 +90,7 @@ export const useModelsData = () => {
 
   // Vendor list
   const [vendors, setVendors] = useState([]);
+  const [vendorsWithChannels, setVendorsWithChannels] = useState({});
   const [vendorCounts, setVendorCounts] = useState({});
   const [activeVendorKey, setActiveVendorKey] = useState('all');
   const [showAddVendor, setShowAddVendor] = useState(false);
@@ -113,6 +114,10 @@ export const useModelsData = () => {
       if (res.data.success) {
         const items = res.data.data.items || res.data.data || [];
         setVendors(Array.isArray(items) ? items : []);
+        // 保存有渠道模型的供应商 ID 集合
+        if (res.data.vendors_with_channels) {
+          setVendorsWithChannels(res.data.vendors_with_channels);
+        }
       }
     } catch (_) {
       // ignore
@@ -472,6 +477,7 @@ export const useModelsData = () => {
 
     // Vendor data
     vendors,
+    vendorsWithChannels,
     vendorMap,
     vendorCounts,
     activeVendorKey,

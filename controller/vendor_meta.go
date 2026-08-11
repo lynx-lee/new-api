@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAllVendors 获取供应商列表（分页）
+// GetAllVendors 获取供应商列表（分页），同时返回有渠道模型的供应商 ID
 func GetAllVendors(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	vendors, err := model.GetAllVendors(pageInfo.GetStartIdx(), pageInfo.GetPageSize())
@@ -21,7 +21,15 @@ func GetAllVendors(c *gin.Context) {
 	model.DB.Model(&model.Vendor{}).Count(&total)
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(vendors)
-	common.ApiSuccess(c, pageInfo)
+
+	// 附加有活跃渠道的供应商 ID，用于前端筛选
+	vendorWithCh, _ := model.GetVendorsWithChannels()
+	c.JSON(200, gin.H{
+		"success":                true,
+		"message":                "",
+		"data":                   pageInfo,
+		"vendors_with_channels": vendorWithCh,
+	})
 }
 
 // SearchVendors 搜索供应商

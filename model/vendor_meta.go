@@ -69,6 +69,27 @@ func GetAllVendors(offset int, limit int) ([]*Vendor, error) {
 	return vendors, err
 }
 
+// GetVendorsWithChannels 返回所有有活跃渠道模型的 vendor ID 集合
+// 通过 abilities + channels 表反查，确保 vendor 下至少有一个模型绑定了活跃渠道
+func GetVendorsWithChannels() (map[int]bool, error) {
+	var rows []struct {
+		VendorID int
+	}
+	err := DB.Table("models").
+		Select("DISTINCT models.vendor_id").
+		Joins("JOIN abilities ON abilities.model = models.model_name AND abilities.enabled = ?", true).
+		Where("models.deleted_at IS NULL AND models.vendor_id IS NOT NULL AND models.vendor_id > 0").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int]bool, len(rows))
+	for _, r := range rows {
+		result[r.VendorID] = true
+	}
+	return result, nil
+}
+
 // SearchVendors 按关键字搜索供应商
 func SearchVendors(keyword string, offset int, limit int) ([]*Vendor, int64, error) {
 	db := DB.Model(&Vendor{})
